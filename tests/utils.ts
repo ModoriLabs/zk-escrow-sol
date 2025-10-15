@@ -97,6 +97,15 @@ export function loadProof(): Proof {
 }
 
 /**
+ * Load simple proof fixture with short parameters (suitable for Solana transaction size limits)
+ */
+export function loadSimpleProof(): Proof {
+  const fixturePath = path.join(__dirname, "fixtures", "simple-proof.json");
+  const contents = readFileSync(fixturePath, "utf-8");
+  return JSON.parse(contents) as Proof;
+}
+
+/**
  * Serialize claim data to match Solidity's Claims.serialise() format
  * Format: identifier + "\n" + owner + "\n" + timestampS + "\n" + epoch
  *

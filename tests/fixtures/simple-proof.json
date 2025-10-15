@@ -1,0 +1,20 @@
+{
+  "claimInfo": {
+    "provider": "http",
+    "parameters": "{\"dob\":\"1988-02-10\"}",
+    "context": "0x0000000000000000000000000000000000000001"
+  },
+  "signedClaim": {
+    "claim": {
+      "identifier": "0x6924a8dcf766f138bdd4d1e118d28e5431217b163e8515d3229a1870fa70b831",
+      "owner": "0xf9f25d1b846625674901ace47d6313d1ac795265",
+      "timestampS": 1750832369,
+      "epoch": 1
+    },
+    "signatures": [
+      "0xcb3953112fa4a3367501345f1b5048e3e167e3e286f1aa83acf7fa619f133c9b07d851575bcfbce9fdf858a388660358569864ffca18d8e490e75e5f5df797961b"
+    ]
+  },
+  "isAppclipProof": false,
+  "expectedWitness": "0x2e988A386a799F506693793c6A5AF6B54dfAaBfB"
+}
