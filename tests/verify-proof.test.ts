@@ -11,8 +11,8 @@ describe("verify_proof_signatures (original proof.json)", () => {
     // Prepare proof structure matching our Solana types
     const proof = {
       claimInfo: {
+        // !NOTE: there is no 'parameters' in the proof.json
         provider: fixture.claimInfo.provider,
-        parameters: fixture.claimInfo.parameters,
         context: fixture.claimInfo.context,
       },
       signedClaim: {
@@ -55,7 +55,6 @@ describe("verify_proof_signatures (original proof.json)", () => {
     const proof = {
       claimInfo: {
         provider: fixture.claimInfo.provider,
-        parameters: fixture.claimInfo.parameters,
         context: fixture.claimInfo.context,
       },
       signedClaim: {
@@ -91,7 +90,6 @@ describe("verify_proof_signatures (original proof.json)", () => {
     const proof = {
       claimInfo: {
         provider: fixture.claimInfo.provider,
-        parameters: fixture.claimInfo.parameters,
         context: fixture.claimInfo.context,
       },
       signedClaim: {

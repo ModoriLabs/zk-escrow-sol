@@ -145,7 +145,6 @@ pub mod secp256k1_test {
         // 2. Verify claim identifier matches hash of claim info
         let computed_identifier = hash_claim_info(
             &proof.claim_info.provider,
-            &proof.claim_info.parameters,
             &proof.claim_info.context,
         );
         let computed_identifier_str = format!("0x{}", hex::encode(computed_identifier));
@@ -254,11 +253,10 @@ pub struct VerifyProofSignatures {}
 // Data Structures (zk-escrow compatible)
 // ============================================================================
 
-/// Claim information containing provider, parameters, and context
+/// Claim information containing provider and context (parameters removed for size optimization)
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct ClaimInfo {
     pub provider: String,
-    pub parameters: String,
     pub context: String,
 }
 

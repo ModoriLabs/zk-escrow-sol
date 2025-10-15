@@ -124,13 +124,15 @@ export function serialiseClaimData(claimData: CompleteClaimData): string {
   ].join("\n");
 }
 
-// ok
+/**
+ * Hash ClaimInfo (with parameters) - for original proof.json
+ */
 export function hashClaimInfo(claimInfo: ClaimInfo) {
   const str = [
     claimInfo.provider,
     "\n",
-    claimInfo.parameters,
-    "\n",
+    // claimInfo.parameters,
+    // "\n",
     claimInfo.context,
   ].join("");
   return keccak256(toUtf8Bytes(str));
