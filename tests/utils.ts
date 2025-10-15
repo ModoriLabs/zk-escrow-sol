@@ -1,4 +1,31 @@
-import { Wallet, hashMessage, getBytes } from "ethers";
+import { Wallet, hashMessage, getBytes, keccak256, toUtf8Bytes } from "ethers";
+import { readFileSync } from "fs";
+import path from "path";
+
+export interface ClaimInfo {
+  provider: string;
+  parameters: string;
+  context: string;
+}
+
+export interface CompleteClaimData {
+  identifier: string;
+  owner: string;
+  timestampS: number;
+  epoch: number;
+}
+
+export interface SignedClaim {
+  claim: CompleteClaimData;
+  signatures: string[];
+}
+
+export interface Proof {
+  claimInfo: ClaimInfo;
+  signedClaim: SignedClaim;
+  isAppclipProof: boolean;
+  expectedWitness: string;
+}
 
 /**
  * Create a test Ethereum wallet
@@ -48,4 +75,44 @@ export function getRecoveryId(signatureBytes: number[]): number {
   const v = signatureBytes[64];
   // Ethereum uses 27/28, Solana secp256k1_recover expects 0/1
   return v - 27;
+}
+
+/**
+ * Load claim proof fixture used for integration tests
+ */
+export function loadProof(): Proof {
+  const fixturePath = path.join(__dirname, "fixtures", "proof.json");
+  const contents = readFileSync(fixturePath, "utf-8");
+  return JSON.parse(contents) as Proof;
+}
+
+/**
+ * Serialize claim data to match Solidity's Claims.serialise() format
+ * Format: identifier + "\n" + owner + "\n" + timestampS + "\n" + epoch
+ *
+ * Matches zk-escrow implementation:
+ * - identifier: hex string (already in 0x format)
+ * - owner: address string (lowercase)
+ * - timestampS: decimal string
+ * - epoch: decimal string
+ */
+export function serialiseClaimData(claimData: CompleteClaimData): string {
+  return [
+    claimData.identifier, // Already in 0x... format
+    claimData.owner.toLowerCase(), // Normalize to lowercase
+    claimData.timestampS.toString(),
+    claimData.epoch.toString(),
+  ].join("\n");
+}
+
+// ok
+export function hashClaimInfo(claimInfo: ClaimInfo) {
+  const str = [
+    claimInfo.provider,
+    "\n",
+    claimInfo.parameters,
+    "\n",
+    claimInfo.context,
+  ].join("");
+  return keccak256(toUtf8Bytes(str));
 }
