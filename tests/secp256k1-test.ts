@@ -2,13 +2,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Secp256k1Test } from "../target/types/secp256k1_test";
 import { expect } from "chai";
-import { Wallet } from "ethers";
+import { HDNodeWallet } from "ethers";
 import {
   createTestWallet,
-  signTestMessage,
+  signMessage,
   serializeSignature,
-  getMessageHash,
-  getRecoveryId,
+  loadProof,
+  CompleteClaimData,
+  serialiseClaimData,
 } from "./utils";
 
 describe("secp256k1-test", () => {
@@ -18,8 +19,8 @@ describe("secp256k1-test", () => {
 
   const program = anchor.workspace.Secp256k1Test as Program<Secp256k1Test>;
 
-  describe("On-chain: Signature verification", () => {
-    let wallet: Wallet;
+  describe("On-chain: Signature verification with simple message", () => {
+    let wallet: HDNodeWallet;
     let message: string;
     let signature: string;
     let signatureBytes: number[];
@@ -28,7 +29,7 @@ describe("secp256k1-test", () => {
       // Setup test data
       wallet = createTestWallet();
       message = "Hello, Solana!";
-      signature = await signTestMessage(wallet, message);
+      signature = await signMessage(wallet, message);
       signatureBytes = serializeSignature(signature);
 
       console.log("\n=== Test Setup ===");
@@ -120,30 +121,48 @@ describe("secp256k1-test", () => {
         expect(error.toString()).to.include("InvalidSignature");
       }
     });
+  });
 
-    it("should handle multiple different signatures", async () => {
-      console.log("\n=== Testing multiple different signatures ===");
+  describe.only("On-chain: Signature verification with claim data", () => {
+    const proof = loadProof();
+    console.log("proof", proof);
+    let wallet: HDNodeWallet;
+    let claimData: CompleteClaimData;
+    let signature: string;
+    let signatureBytes: number[];
 
-      // Test with 3 different wallets and messages
-      for (let i = 0; i < 3; i++) {
-        const testWallet = createTestWallet();
-        const testMessage = `Test message ${i}`;
-        const testSignature = await signTestMessage(testWallet, testMessage);
-        const testSigBytes = serializeSignature(testSignature);
+    before(async () => {
+      // Setup test data
+      wallet = createTestWallet();
+      claimData = proof.signedClaim.claim;
+      const message = serialiseClaimData(claimData);
+      signature = await signMessage(wallet, message);
+      signatureBytes = serializeSignature(signature);
 
-        console.log(`\nTest ${i + 1}:`);
-        console.log("  Address:", testWallet.address);
-        console.log("  Message:", testMessage);
+      console.log("\n=== Test Setup ===");
+      console.log("Wallet address:", wallet.address);
+      console.log("Message:", message);
+      console.log("Signature:", signature);
+      console.log("Signature bytes length:", signatureBytes.length);
+    });
 
+    it("should verify valid Ethereum signature on-chain", async () => {
+      console.log("\n=== Running on-chain verification ===");
+
+      try {
         const tx = await program.methods
-          .verifySignature(
-            testMessage,
-            Buffer.from(testSigBytes),
-            testWallet.address
+          .verifySignedClaim(
+            claimData,
+            Buffer.from(signatureBytes),
+            proof.expectedWitness
           )
           .rpc();
 
-        console.log("  ✅ Verified, tx:", tx);
+        console.log("✅ Transaction signature:", tx);
+        console.log("✅ Signature verified successfully on-chain!");
+      } catch (error) {
+        console.error("❌ Transaction failed:", error);
+        throw error;
       }
     });
   });

@@ -38,10 +38,7 @@ pub mod secp256k1_test {
         msg!("Expected address: {}", expected_address);
 
         // 1. Validate signature format (must be 65 bytes)
-        require!(
-            signature.len() == 65,
-            Secp256k1Error::InvalidSignature
-        );
+        require!(signature.len() == 65, Secp256k1Error::InvalidSignature);
 
         // 2. Convert signature Vec to array
         let mut sig_array = [0u8; 65];
@@ -67,6 +64,51 @@ pub mod secp256k1_test {
 
         Ok(())
     }
+
+    /// Verify a signed claim by recreating the serialised message and recovering signer address
+    pub fn verify_signed_claim(
+        _ctx: Context<VerifySignedClaim>,
+        claim: ClaimDataInput,
+        signature: Vec<u8>,
+        expected_witness: String,
+    ) -> Result<()> {
+        require!(signature.len() == 65, Secp256k1Error::InvalidSignature);
+
+        // Validate identifier/owner formatting
+        let identifier_bytes = hex_str_to_bytes(&claim.identifier)?;
+        require!(
+            identifier_bytes.len() == 32,
+            Secp256k1Error::IdentifierMismatch
+        );
+
+        let owner_bytes = hex_str_to_bytes(&claim.owner)?;
+        require!(owner_bytes.len() == 20, Secp256k1Error::InvalidHex);
+
+        let mut sig_array = [0u8; 65];
+        sig_array.copy_from_slice(&signature);
+
+        let message = serialise_claim_data(
+            &claim.identifier,
+            &claim.owner,
+            claim.timestamp_s,
+            claim.epoch,
+        );
+
+        msg!("Serialised claim message: {}", message);
+
+        let message_hash = prepare_for_verification(&message);
+        let recovered_address = recover_signer_address(&message_hash, &sig_array)?;
+
+        msg!("Recovered witness: {}", recovered_address);
+        msg!("Expected witness: {}", expected_witness);
+
+        require!(
+            recovered_address.eq_ignore_ascii_case(&expected_witness),
+            Secp256k1Error::AddressMismatch
+        );
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -74,3 +116,17 @@ pub struct Initialize {}
 
 #[derive(Accounts)]
 pub struct VerifySignature {}
+
+#[derive(Accounts)]
+pub struct VerifyClaimIdentifier {}
+
+#[derive(Accounts)]
+pub struct VerifySignedClaim {}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+pub struct ClaimDataInput {
+    pub identifier: String,
+    pub owner: String,
+    pub timestamp_s: u32,
+    pub epoch: u32,
+}

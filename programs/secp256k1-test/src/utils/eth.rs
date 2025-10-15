@@ -30,19 +30,13 @@ pub fn prepare_for_verification(content: &str) -> [u8; HASH_BYTES] {
 pub fn recover_signer_address(hash: &[u8; 32], signature: &[u8; 65]) -> Result<String> {
     // Extract recovery ID from v value
     // Ethereum uses v = 27 or 28, Solana expects 0 or 1
-    require!(
-        signature[64] >= 27,
-        Secp256k1Error::InvalidRecoveryId
-    );
+    require!(signature[64] >= 27, Secp256k1Error::InvalidRecoveryId);
 
     let recovery_id = signature[64]
         .checked_sub(27)
         .ok_or(Secp256k1Error::InvalidRecoveryId)?;
 
-    require!(
-        recovery_id <= 1,
-        Secp256k1Error::InvalidRecoveryId
-    );
+    require!(recovery_id <= 1, Secp256k1Error::InvalidRecoveryId);
 
     // Extract r and s from signature (first 64 bytes)
     let signature_data = &signature[0..64];

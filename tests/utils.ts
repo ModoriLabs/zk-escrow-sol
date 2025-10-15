@@ -1,6 +1,13 @@
-import { Wallet, hashMessage, getBytes, keccak256, toUtf8Bytes } from "ethers";
 import { readFileSync } from "fs";
 import path from "path";
+import {
+  Wallet,
+  hashMessage,
+  getBytes,
+  HDNodeWallet,
+  keccak256,
+  toUtf8Bytes,
+} from "ethers";
 
 export interface ClaimInfo {
   provider: string;
@@ -30,7 +37,7 @@ export interface Proof {
 /**
  * Create a test Ethereum wallet
  */
-export function createTestWallet(): Wallet {
+export function createTestWallet(): HDNodeWallet {
   return Wallet.createRandom();
 }
 
@@ -38,8 +45,8 @@ export function createTestWallet(): Wallet {
  * Sign a message with Ethereum wallet
  * Returns signature in compact format (65 bytes: r + s + v)
  */
-export async function signTestMessage(
-  wallet: Wallet,
+export async function signMessage(
+  wallet: HDNodeWallet,
   message: string
 ): Promise<string> {
   return await wallet.signMessage(message);

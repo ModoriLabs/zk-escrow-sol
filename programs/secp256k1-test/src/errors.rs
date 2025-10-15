@@ -13,4 +13,10 @@ pub enum Secp256k1Error {
 
     #[msg("Recovered address does not match expected address")]
     AddressMismatch,
+
+    #[msg("Claim identifier does not match expected value")]
+    IdentifierMismatch,
+
+    #[msg("Failed to decode hex string")]
+    InvalidHex,
 }
