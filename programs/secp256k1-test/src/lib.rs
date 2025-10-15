@@ -45,7 +45,7 @@ pub mod secp256k1_test {
         sig_array.copy_from_slice(&signature);
 
         // 3. Prepare message hash (Ethereum Signed Message format)
-        let message_hash = prepare_for_verification(&message);
+        let message_hash = hash_ethereum_message(&message);
 
         msg!("Message hash: {:?}", hex::encode(message_hash));
 
@@ -96,7 +96,7 @@ pub mod secp256k1_test {
 
         msg!("Serialised claim message: {}", message);
 
-        let message_hash = prepare_for_verification(&message);
+        let message_hash = hash_ethereum_message(&message);
         let recovered_address = recover_signer_address(&message_hash, &sig_array)?;
 
         msg!("Recovered witness: {}", recovered_address);

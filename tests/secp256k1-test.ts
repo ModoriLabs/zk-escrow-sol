@@ -14,7 +14,16 @@ import {
 
 describe("secp256k1-test", () => {
   // Configure the client to use the local cluster
-  const provider = anchor.AnchorProvider.env();
+  const provider = (() => {
+    try {
+      return anchor.AnchorProvider.env();
+    } catch (error) {
+      console.warn(
+        "ANCHOR_PROVIDER_URL not set – falling back to AnchorProvider.local()"
+      );
+      return anchor.AnchorProvider.local();
+    }
+  })();
   anchor.setProvider(provider);
 
   const program = anchor.workspace.Secp256k1Test as Program<Secp256k1Test>;
@@ -125,7 +134,6 @@ describe("secp256k1-test", () => {
 
   describe.only("On-chain: Signature verification with claim data", () => {
     const proof = loadProof();
-    console.log("proof", proof);
     let wallet: HDNodeWallet;
     let claimData: CompleteClaimData;
     let signature: string;

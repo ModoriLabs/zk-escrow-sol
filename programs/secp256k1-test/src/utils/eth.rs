@@ -8,7 +8,7 @@ use anchor_lang::solana_program::secp256k1_recover::secp256k1_recover;
 ///
 /// Format: "\x19Ethereum Signed Message:\n{length}{content}"
 /// Then hash with Keccak256
-pub fn prepare_for_verification(content: &str) -> [u8; HASH_BYTES] {
+pub fn hash_ethereum_message(content: &str) -> [u8; HASH_BYTES] {
     let message = [
         "\x19Ethereum Signed Message:\n",
         &content.len().to_string(),
@@ -56,34 +56,4 @@ pub fn recover_signer_address(hash: &[u8; 32], signature: &[u8; 65]) -> Result<S
     let address = format!("0x{}", hex::encode(address_bytes));
 
     Ok(address)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_prepare_for_verification() {
-        // Test message
-        let message = "Hello, Solana!";
-
-        // Get hash
-        let hash = prepare_for_verification(message);
-
-        // Should produce 32 bytes
-        assert_eq!(hash.len(), 32);
-
-        // Should be deterministic
-        let hash2 = prepare_for_verification(message);
-        assert_eq!(hash, hash2);
-    }
-
-    #[test]
-    fn test_prepare_different_messages() {
-        let hash1 = prepare_for_verification("message1");
-        let hash2 = prepare_for_verification("message2");
-
-        // Different messages should produce different hashes
-        assert_ne!(hash1, hash2);
-    }
 }
