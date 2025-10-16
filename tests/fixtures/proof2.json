@@ -1,0 +1,19 @@
+{
+  "claimInfo": {
+    "provider": "http",
+    "context": "{\"extractedParameters\":{\"documentTitle\":\"송금확인증\",\"receivingBankAccount\":\"100000021389(토스뱅크)\",\"recipientName\":\"이현민\",\"senderNickname\":\"anvil-1\",\"transactionAmount\":\"-138\",\"transactionDate\":\"2025-07-25 12:20:09\"},\"providerHash\":\"0x039d7bbc8338d327d2956ee9de45cef167275ba83652ca9dc62b1219f0bcc937\"}"
+  },
+  "signedClaim": {
+    "claim": {
+      "identifier": "0xa2faa6872aa30e5bbc81f2dc1b41158644446072a5403149066401e50e52c4cb",
+      "owner": "0xf9f25d1b846625674901ace47d6313d1ac795265",
+      "timestampS": 1760583047,
+      "epoch": 1
+    },
+    "signatures": [
+      "0xd0bc81cafbbe556678b39475e87ddbe00c5c1a64f00315cac0cd618c2d438b3f724294b37c824c3d311e54addf4101116b86a094e0d275d555c85716a5cd2b4a1b"
+    ]
+  },
+  "isAppclipProof": false,
+  "expectedWitness": "0x189027e3C77b3a92fd01bF7CC4E6a86E77F5034E"
+}
