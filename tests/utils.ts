@@ -149,7 +149,8 @@ export function getProgram(): Program<Secp256k1Test> {
   // Load IDL directly to ensure we have the latest version
   const idlPath = path.join(__dirname, "../target/idl/secp256k1_test.json");
   const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
-  const programId = new anchor.web3.PublicKey(idl.metadata.address);
+  // Anchor 0.32+ uses 'address' at root level instead of 'metadata.address'
+  const programId = new anchor.web3.PublicKey(idl.address || idl.metadata?.address);
 
-  return new Program<Secp256k1Test>(idl as any, programId, provider);
+  return new Program<Secp256k1Test>(idl as any, provider);
 }

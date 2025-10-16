@@ -1,7 +1,7 @@
 use crate::errors::*;
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::keccak::{hash as keccak_256, HASH_BYTES};
-use anchor_lang::solana_program::secp256k1_recover::secp256k1_recover;
+use solana_program::keccak::{hash as keccak_256, HASH_BYTES};
+use solana_program::secp256k1_recover::secp256k1_recover;
 
 /// Prepare message for verification by adding Ethereum Signed Message prefix
 /// Matches ethers.js hashMessage() behavior

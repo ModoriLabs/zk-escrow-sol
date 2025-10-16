@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::keccak::hash as keccak_256;
+use solana_program::keccak::hash as keccak_256;
 
 use crate::errors::Secp256k1Error;
 
