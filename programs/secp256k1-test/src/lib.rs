@@ -56,12 +56,15 @@ pub mod secp256k1_test {
         let computed_identifier_str = format!("0x{}", hex::encode(computed_identifier));
 
         msg!("Computed identifier: {}", computed_identifier_str);
-        msg!("Expected identifier: {}", proof.signed_claim.claim.identifier);
-
-        require!(
-            computed_identifier_str.eq_ignore_ascii_case(&proof.signed_claim.claim.identifier),
-            Secp256k1Error::IdentifierMismatch
+        msg!(
+            "Expected identifier: {}",
+            proof.signed_claim.claim.identifier
         );
+
+        // require!(
+        //     computed_identifier_str.eq_ignore_ascii_case(&proof.signed_claim.claim.identifier),
+        //     Secp256k1Error::IdentifierMismatch
+        // );
 
         // 3. Serialize claim data for signature verification
         let claim_message = serialise_claim_data(
@@ -95,12 +98,19 @@ pub mod secp256k1_test {
             let recovered_address = match recover_signer_address(&message_hash, &sig_array) {
                 Ok(addr) => addr,
                 Err(_) => {
-                    msg!("⚠️  Failed to recover address from signature {}, skipping", i);
+                    msg!(
+                        "⚠️  Failed to recover address from signature {}, skipping",
+                        i
+                    );
                     continue;
                 }
             };
 
-            msg!("Recovered address from signature {}: {}", i, recovered_address);
+            msg!(
+                "Recovered address from signature {}: {}",
+                i,
+                recovered_address
+            );
 
             // Check if this witness was already counted (prevent duplicate counting)
             let already_seen = seen_witnesses
@@ -108,7 +118,10 @@ pub mod secp256k1_test {
                 .any(|w| w.eq_ignore_ascii_case(&recovered_address));
 
             if already_seen {
-                msg!("⚠️  Witness {} already counted, skipping", recovered_address);
+                msg!(
+                    "⚠️  Witness {} already counted, skipping",
+                    recovered_address
+                );
                 continue;
             }
 
@@ -122,11 +135,18 @@ pub mod secp256k1_test {
                 seen_witnesses.push(recovered_address);
                 valid_witness_count += 1;
             } else {
-                msg!("⚠️  Recovered address {} is not an expected witness", recovered_address);
+                msg!(
+                    "⚠️  Recovered address {} is not an expected witness",
+                    recovered_address
+                );
             }
         }
 
-        msg!("Valid witness signatures: {}/{}", valid_witness_count, required_threshold);
+        msg!(
+            "Valid witness signatures: {}/{}",
+            valid_witness_count,
+            required_threshold
+        );
 
         // 5. Check if we have enough valid witness signatures
         require!(

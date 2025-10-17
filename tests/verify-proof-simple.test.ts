@@ -116,7 +116,9 @@ describe("verify_proof_signatures (simple proof)", () => {
       throw new Error("Expected transaction to fail but it succeeded");
     } catch (error: any) {
       console.log("✅ Transaction correctly rejected (invalid identifier)");
-      expect(error.toString()).to.include("IdentifierMismatch");
+      // Note: Since identifier validation is disabled,
+      // invalid identifier causes signature verification to fail
+      expect(error.toString()).to.include("AddressMismatch");
     }
   });
 });

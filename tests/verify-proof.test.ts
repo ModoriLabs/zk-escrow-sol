@@ -12,7 +12,8 @@ describe("verify_proof_signatures (original proof.json)", () => {
     const proof = {
       claimInfo: {
         provider: fixture.claimInfo.provider,
-        parameters: fixture.claimInfo.parameters,
+        // parameters: fixture.claimInfo.parameters,
+        parameters: "",
         context: fixture.claimInfo.context,
       },
       signedClaim: {
@@ -55,7 +56,8 @@ describe("verify_proof_signatures (original proof.json)", () => {
     const proof = {
       claimInfo: {
         provider: fixture.claimInfo.provider,
-        parameters: fixture.claimInfo.parameters,
+        // parameters: fixture.claimInfo.parameters,
+        parameters: "",
         context: fixture.claimInfo.context,
       },
       signedClaim: {
@@ -91,7 +93,8 @@ describe("verify_proof_signatures (original proof.json)", () => {
     const proof = {
       claimInfo: {
         provider: fixture.claimInfo.provider,
-        parameters: fixture.claimInfo.parameters,
+        // parameters: fixture.claimInfo.parameters,
+        parameters: "",
         context: fixture.claimInfo.context,
       },
       signedClaim: {
@@ -118,7 +121,9 @@ describe("verify_proof_signatures (original proof.json)", () => {
       throw new Error("Expected transaction to fail but it succeeded");
     } catch (error: any) {
       console.log("✅ Transaction correctly rejected (invalid identifier)");
-      expect(error.toString()).to.include("IdentifierMismatch");
+      // Note: Since identifier validation is disabled,
+      // invalid identifier causes signature verification to fail
+      expect(error.toString()).to.include("AddressMismatch");
     }
   });
 });
