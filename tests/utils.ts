@@ -10,7 +10,7 @@ import {
 } from "ethers";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Secp256k1Test } from "../target/types/secp256k1_test";
+import { ZkEscrowSol } from "../target/types/zk_escrow_sol";
 
 export interface ClaimInfo {
   provider: string;
@@ -140,14 +140,14 @@ export function hashClaimInfo(claimInfo: ClaimInfo) {
  * Get Program instance with latest IDL
  * Note: anchor.workspace sometimes has stale IDL cache, so we load directly from file
  */
-export function getProgram(): Program<Secp256k1Test> {
+export function getProgram(): Program<ZkEscrowSol> {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
   // Load IDL directly to ensure we have the latest version
-  const idlPath = path.join(__dirname, "../target/idl/secp256k1_test.json");
+  const idlPath = path.join(__dirname, "../target/idl/zk_escrow_sol.json");
   const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
   const programId = new anchor.web3.PublicKey(idl.metadata.address);
 
-  return new Program<Secp256k1Test>(idl as any, programId, provider);
+  return new Program<ZkEscrowSol>(idl as any, programId, provider);
 }

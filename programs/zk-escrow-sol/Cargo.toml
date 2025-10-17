@@ -1,12 +1,12 @@
 [package]
-name = "secp256k1-test"
+name = "zk-escrow-sol"
 version = "0.1.0"
-description = "Created with Anchor"
+description = "ZK Escrow Solana Program"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "secp256k1_test"
+name = "zk_escrow_sol"
 
 [features]
 no-entrypoint = []

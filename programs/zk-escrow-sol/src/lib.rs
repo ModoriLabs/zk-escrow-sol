@@ -9,7 +9,7 @@ use utils::*;
 declare_id!("A8oUCtSKbVxthxxLiWNWnRBjhZYpJen2zC2wHGWrSqYb");
 
 #[program]
-pub mod secp256k1_test {
+pub mod zk_escrow_sol {
     use super::*;
 
     pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
