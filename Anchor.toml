@@ -5,14 +5,14 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-zk_escrow_sol = "A8oUCtSKbVxthxxLiWNWnRBjhZYpJen2zC2wHGWrSqYb"
+zk_escrow_sol = "J47TtwjNm5VUNLn5XE5goTLKXBuQEpzE5gVPZ85W6EkU"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "/Users/ky/.config/solana/id.json"
+wallet = "./deployer.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.test.ts\""
