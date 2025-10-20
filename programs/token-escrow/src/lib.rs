@@ -1,8 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{self, Token, TokenAccount, Transfer},
-};
+use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use zk_escrow_sol;
 
@@ -68,22 +65,25 @@ pub mod token_escrow {
         let escrow = &ctx.accounts.escrow;
 
         // Verify proof via CPI to verification program
-        // Use expected_witnesses and threshold from escrow configuration
+        // Use verification program, expected_witnesses and threshold from escrow configuration
         let required_threshold = escrow.required_threshold;
         let expected_witnesses = escrow.expected_witnesses.clone();
 
+        // Use verification program from context (validated by constraint to match stored program)
         let cpi_program = ctx.accounts.verification_program.to_account_info();
         let cpi_accounts = zk_escrow_sol::cpi::accounts::VerifyProofSignatures {
             signer: ctx.accounts.user.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-        zk_escrow_sol::cpi::verify_proof_signatures(
+        let verification_result = zk_escrow_sol::cpi::verify_proof_signatures(
             cpi_ctx,
             proof,
             expected_witnesses,
             required_threshold,
-        )?;
+        );
+
+        require!(verification_result.is_ok(), EscrowError::ProofVerificationFailed);
 
         msg!("Proof verified successfully via CPI");
 
@@ -198,7 +198,8 @@ pub struct Withdraw<'info> {
 
     pub token_program: Program<'info, Token>,
 
-    /// CHECK: The verification program that will be called via CPI
+    /// CHECK: Verification program loaded from escrow config
+    #[account(constraint = verification_program.key() == escrow.verification_program)]
     pub verification_program: AccountInfo<'info>,
 }
 
@@ -262,4 +263,7 @@ pub enum EscrowError {
 
     #[msg("Expected witnesses list cannot be empty")]
     InvalidWitnesses,
+
+    #[msg("Proof verification failed")]
+    ProofVerificationFailed,
 }
