@@ -5,7 +5,7 @@ use solana_program::keccak;
 use nullifier_registry;
 use zk_escrow_sol;
 
-declare_id!("EsF9CU3PUf1nQZYFDaq9ws3b8YfbsC84s2MSDbSX8znw");
+declare_id!("BxaG13bDcy3YwQUfbJHYQQR6rAwt47acUuoSSWSMc1yt");
 
 #[program]
 pub mod token_escrow {

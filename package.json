@@ -6,10 +6,16 @@
         "verify-signature": "ts-node tests/verify-proof-signature.ts",
         "deploy": "ts-node scripts/deploy.ts",
         "deploy:localnet": "ts-node scripts/deploy.ts",
-        "deploy:devnet": "anchor deploy --provider.cluster devnet && ts-node scripts/deploy.ts"
+        "deploy:devnet": "anchor deploy --provider.cluster devnet && ts-node scripts/deploy.ts",
+        "deploy-mockusdc": "ts-node scripts/deploy-mock-usdc.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.29.0",
+        "@metaplex-foundation/js": "^0.20.1",
+        "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+        "@metaplex-foundation/umi": "^1.4.1",
+        "@metaplex-foundation/umi-bundle-defaults": "^1.4.1",
+        "@metaplex-foundation/umi-web3js-adapters": "^1.4.1",
         "@solana/spl-token": "^0.3.9",
         "@types/dotenv": "^8.2.3",
         "dotenv": "^17.2.3",
