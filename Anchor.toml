@@ -5,9 +5,15 @@ anchor_version = "0.29.0"
 seeds = false
 skip-lint = false
 
+[programs.devnet]
+spl_with_metadata = "J72XdorZyciQyrVHJvZfyhVzYWHfWPGRbtRtbor3RPst"
+token_escrow = "BxaG13bDcy3YwQUfbJHYQQR6rAwt47acUuoSSWSMc1yt"
+zk_escrow_sol = "7QoUPfkaSaMgq7wddq4sU78wEm6TnMHd3nxVGcMPDcAy"
+
 [programs.localnet]
-zk_escrow_sol = "A8oUCtSKbVxthxxLiWNWnRBjhZYpJen2zC2wHGWrSqYb"
-token_escrow = "EsF9CU3PUf1nQZYFDaq9ws3b8YfbsC84s2MSDbSX8znw"
+spl_with_metadata = "HxunzzbyMwMxfUc2vs6w9ty1LN97GvjU3NPuRPVrhSjM"
+token_escrow = "BxaG13bDcy3YwQUfbJHYQQR6rAwt47acUuoSSWSMc1yt"
+zk_escrow_sol = "7QoUPfkaSaMgq7wddq4sU78wEm6TnMHd3nxVGcMPDcAy"
 
 [registry]
 url = "https://api.apr.dev"
