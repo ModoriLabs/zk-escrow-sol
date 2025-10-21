@@ -1,0 +1,13 @@
+{
+  "cluster": "https://api.devnet.solana.com",
+  "mint": "DVqboXoU3zpgvkN3HkGSdvDF8PWSvHgwq18CrqXyABDk",
+  "tokenAccount": "AEabnXAg9ZsNqtZds6aXJQhYT5TAcLzzx4gGBxd3KcR",
+  "owner": "DAnui9KYDopiRwxKb7DzSsFuDDs7RCDA7gjXwaavpo5J",
+  "metadata": "CNDaqMV8gXVSAHhMxdatAPvPtmvT6eEsLTfAbq2gLEWN",
+  "imageUri": "https://devnet.irys.xyz/HD9iDzV4a3uSRPd37DwenJyGbBvQAF7wmrN94s2KroRx",
+  "decimals": 6,
+  "symbol": "MOCKUSDC",
+  "name": "Mock USDC",
+  "initialSupply": "10,000,000",
+  "deployedAt": "2025-10-21T08:03:40.362Z"
+}

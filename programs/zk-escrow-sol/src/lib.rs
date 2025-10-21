@@ -6,7 +6,7 @@ mod utils;
 use errors::*;
 use utils::*;
 
-declare_id!("A8oUCtSKbVxthxxLiWNWnRBjhZYpJen2zC2wHGWrSqYb");
+declare_id!("7QoUPfkaSaMgq7wddq4sU78wEm6TnMHd3nxVGcMPDcAy");
 
 #[program]
 pub mod zk_escrow_sol {
