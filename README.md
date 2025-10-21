@@ -13,7 +13,7 @@ solana-keygen recover --outfile ./deployer.json --force
 ```
 anchor keys sync
 solana-keygen pubkey target/deploy/zk_escrow_sol-keypair.json
-anchor build 
+anchor build
 ```
 
 ### deploy
@@ -21,3 +21,4 @@ anchor build
 solana airdrop 100 ./deployer.json
 anchor deploy
 ```
+
