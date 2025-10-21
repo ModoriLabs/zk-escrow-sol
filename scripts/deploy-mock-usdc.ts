@@ -180,7 +180,14 @@ async function main() {
     deployedAt: new Date().toISOString(),
   };
 
-  const outputPath = path.resolve(__dirname, "../mock-usdc-deployment.json");
+  // Create deployments directory if it doesn't exist
+  const deploymentsDir = path.resolve(__dirname, "../deployments/devnet");
+  const fs = require("fs");
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
+
+  const outputPath = path.resolve(deploymentsDir, "mock-usdc-deployment.json");
   writeFileSync(outputPath, JSON.stringify(deploymentInfo, null, 2));
 
   console.log("   Deployment info saved to:", outputPath);
