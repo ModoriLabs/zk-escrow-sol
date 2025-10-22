@@ -235,8 +235,9 @@ fn verify_payment_details_from_context(
     require!(recipient_found, Secp256k1Error::RecipientMismatch);
     msg!("✓ Recipient bank account verified: {}", expected_recipient);
 
-    // Check amount (convert u64 to formatted string: 1400 -> "1,400원")
-    let formatted_amount = format_krw_amount(expected_amount);
+    // Check amount (match raw format from context: e.g., "-1000")
+    // Context contains negative amounts like "transactionAmount":"-1000"
+    let formatted_amount = format!("-{}", expected_amount);
     let amount_found = context.contains(&formatted_amount);
     require!(amount_found, Secp256k1Error::AmountMismatch);
     msg!("✓ Payment amount verified: {} KRW", expected_amount);
