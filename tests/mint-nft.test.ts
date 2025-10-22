@@ -5,6 +5,7 @@ import { ASSOCIATED_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { Keypair, SystemProgram } from '@solana/web3.js';
 import type { SplNft } from '../target/types/spl_nft';
+import assert from 'assert';
 
 describe('mint-nft', () => {
   // Configure the client to use the local cluster.
@@ -115,6 +116,36 @@ describe('mint-nft', () => {
         skipPreflight: true,
       });
     console.log('\nNFT Minted! Your transaction signature', tx);
+
+    // Fetch and verify collection state was updated
+    const collectionStateAccount = await program.account.collectionState.fetch(collectionState);
+
+    console.log('\nCollection State Assertions:');
+    console.log('Counter:', collectionStateAccount.counter.toString());
+    console.log('Name:', collectionStateAccount.name);
+    console.log('Symbol:', collectionStateAccount.symbol);
+    console.log('URI Prefix:', collectionStateAccount.uriPrefix);
+
+    // Assert collection state
+    assert.strictEqual(collectionStateAccount.counter.toNumber(), 1, 'Counter should be incremented to 1 after first mint');
+    assert.strictEqual(collectionStateAccount.name, 'KCONA', 'Collection name should be KCONA');
+    assert.strictEqual(collectionStateAccount.symbol, 'KCONA', 'Collection symbol should be KCONA');
+    assert.strictEqual(collectionStateAccount.uriPrefix, 'https://kcona.io/metadata', 'URI prefix should be https://kcona.io/metadata');
+
+    // Fetch metadata account to verify URI
+    const metadataAccountInfo = await provider.connection.getAccountInfo(metadata);
+    assert.ok(metadataAccountInfo, 'Metadata account should exist');
+
+    // Decode the metadata to check URI (basic check - metadata exists and has data)
+    const metadataData = metadataAccountInfo.data;
+    const uriExpected = 'https://kcona.io/metadata/1';
+
+    // The URI is stored in the metadata account - we can verify it's there
+    const metadataString = metadataData.toString();
+    assert.ok(metadataString.includes(uriExpected), `Metadata should contain URI: ${uriExpected}`);
+
+    console.log('✓ All assertions passed!');
+    console.log(`✓ NFT minted with URI: ${uriExpected}`);
   });
 
   it('Verify Collection', async () => {
