@@ -7,7 +7,7 @@ pub mod contexts;
 pub use contexts::*;
 
 #[program]
-pub mod mint_nft {
+pub mod spl_nft {
 
     use super::*;
     pub fn create_collection(ctx: Context<CreateCollection>) -> Result<()> {
