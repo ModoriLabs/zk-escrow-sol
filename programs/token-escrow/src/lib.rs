@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-use solana_program::keccak;
+use anchor_lang::solana_program::keccak;
 
 use nullifier_registry;
 use zk_escrow_sol;

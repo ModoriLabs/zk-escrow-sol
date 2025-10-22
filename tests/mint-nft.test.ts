@@ -53,7 +53,7 @@ describe('mint-nft', () => {
 
     const tx = await program.methods
       .createCollection()
-      .accountsPartial({
+      .accounts({
         user: wallet.publicKey,
         mint: collectionMint,
         mintAuthority,
@@ -86,7 +86,7 @@ describe('mint-nft', () => {
 
     const tx = await program.methods
       .mintNft()
-      .accountsPartial({
+      .accounts({
         owner: wallet.publicKey,
         destination,
         metadata,
@@ -118,7 +118,7 @@ describe('mint-nft', () => {
 
     const tx = await program.methods
       .verifyCollection()
-      .accountsPartial({
+      .accounts({
         authority: wallet.publicKey,
         metadata: mintMetadata,
         mint,
