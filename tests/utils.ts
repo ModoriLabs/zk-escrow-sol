@@ -166,3 +166,43 @@ export function getTokenEscrowProgram(): Program<any> {
 
   return new Program(idl as any, programId, provider);
 }
+
+/**
+ * Get NullifierRegistry Program instance
+ */
+export function getNullifierProgram(): Program<any> {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+
+  // Load IDL directly
+  const idlPath = path.join(__dirname, "../target/idl/nullifier_registry.json");
+  const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
+  const programId = new anchor.web3.PublicKey(idl.metadata.address);
+
+  return new Program(idl as any, programId, provider);
+}
+
+/**
+ * Calculate deterministic nullifier hash from proof context
+ * Must match on-chain calculation: keccak256(senderNickname + transactionDate)
+ */
+export function calculateNullifier(context: string): string {
+  const parsed = JSON.parse(context);
+  const params = parsed.extractedParameters;
+
+  if (!params.senderNickname) {
+    throw new Error("Missing senderNickname in context");
+  }
+  if (!params.transactionDate) {
+    throw new Error("Missing transactionDate in context");
+  }
+
+  // Create nullifier data (same as on-chain)
+  const nullifierData = `${params.senderNickname}${params.transactionDate}`;
+
+  // Hash using keccak256
+  const hash = keccak256(toUtf8Bytes(nullifierData));
+
+  // Take first 16 bytes (32 hex chars) to stay within 32 byte limit
+  return hash.slice(2, 34); // Remove "0x" and take 32 chars
+}

@@ -8,6 +8,7 @@ skip-lint = false
 [programs.localnet]
 zk_escrow_sol = "A8oUCtSKbVxthxxLiWNWnRBjhZYpJen2zC2wHGWrSqYb"
 token_escrow = "EsF9CU3PUf1nQZYFDaq9ws3b8YfbsC84s2MSDbSX8znw"
+nullifier_registry = "Nu11ifier1111111111111111111111111111111111"
 
 [registry]
 url = "https://api.apr.dev"
