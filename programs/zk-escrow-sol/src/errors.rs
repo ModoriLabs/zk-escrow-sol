@@ -19,4 +19,19 @@ pub enum Secp256k1Error {
 
     #[msg("Failed to decode hex string")]
     InvalidHex,
+
+    #[msg("Invalid bank account")]
+    InvalidBankAccount,
+
+    #[msg("Amount must be greater than zero")]
+    InvalidAmount,
+
+    #[msg("Invalid currency - only KRW supported")]
+    InvalidCurrency,
+
+    #[msg("Recipient bank account mismatch")]
+    RecipientMismatch,
+
+    #[msg("Payment amount mismatch")]
+    AmountMismatch,
 }

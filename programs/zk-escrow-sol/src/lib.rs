@@ -12,8 +12,34 @@ declare_id!("A8oUCtSKbVxthxxLiWNWnRBjhZYpJen2zC2wHGWrSqYb");
 pub mod zk_escrow_sol {
     use super::*;
 
-    pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
+    /// Initialize ZK verification program with payment validation config
+    /// This creates the payment config PDA with expected payment details
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        recipient_bank_account: String,
+        allowed_amount: u64,
+        fiat_currency: String,
+    ) -> Result<()> {
+        // Validation
+        require!(
+            !recipient_bank_account.is_empty(),
+            Secp256k1Error::InvalidBankAccount
+        );
+        require!(allowed_amount > 0, Secp256k1Error::InvalidAmount);
+        require!(fiat_currency == "KRW", Secp256k1Error::InvalidCurrency);
+
+        let config = &mut ctx.accounts.payment_config;
+        config.recipient_bank_account = recipient_bank_account.clone();
+        config.allowed_amount = allowed_amount;
+        config.fiat_currency = fiat_currency.clone();
+        config.authority = ctx.accounts.authority.key();
+
         msg!("ZK Proof Verification program initialized");
+        msg!("Recipient: {}", recipient_bank_account);
+        msg!("Allowed amount: {} KRW", allowed_amount);
+        msg!("Currency: {}", fiat_currency);
+        msg!("Authority: {}", ctx.accounts.authority.key());
+
         Ok(())
     }
 
@@ -22,18 +48,31 @@ pub mod zk_escrow_sol {
     /// 1. Claim identifier matches hash of claim info
     /// 2. Signatures are valid and recover to expected witnesses
     /// 3. At least `required_threshold` valid witness signatures exist
+    /// 4. Payment details validation against stored config
     ///
     /// # Arguments
     /// * `proof` - Complete proof containing claim_info and signed_claim
     /// * `expected_witnesses` - List of valid witness addresses
     /// * `required_threshold` - Minimum number of valid signatures required
     pub fn verify_proof_signatures(
-        _ctx: Context<VerifyProofSignatures>,
+        ctx: Context<VerifyProofSignatures>,
         proof: Proof,
         expected_witnesses: Vec<String>,
         required_threshold: u8,
     ) -> Result<()> {
-        verify_proof_internal(&proof, &expected_witnesses, required_threshold)
+        // Verify proof signatures
+        verify_proof_internal(&proof, &expected_witnesses, required_threshold)?;
+
+        // Verify payment details from stored config
+        let config = &ctx.accounts.payment_config;
+        verify_payment_details_from_context(
+            &proof.claim_info.context,
+            &config.recipient_bank_account,
+            config.allowed_amount,
+            &config.fiat_currency,
+        )?;
+
+        Ok(())
     }
 }
 
@@ -112,10 +151,7 @@ fn verify_proof_internal(
         let recovered_address = match recover_signer_address(&message_hash, &sig_array) {
             Ok(addr) => addr,
             Err(_) => {
-                msg!(
-                    "Failed to recover address from signature {}, skipping",
-                    i
-                );
+                msg!("Failed to recover address from signature {}, skipping", i);
                 continue;
             }
         };
@@ -132,10 +168,7 @@ fn verify_proof_internal(
             .any(|w| w.eq_ignore_ascii_case(&recovered_address));
 
         if already_seen {
-            msg!(
-                "Witness {} already counted, skipping",
-                recovered_address
-            );
+            msg!("Witness {} already counted, skipping", recovered_address);
             continue;
         }
 
@@ -173,23 +206,95 @@ fn verify_proof_internal(
     Ok(())
 }
 
+/// Verify payment details extracted from proof context
+fn verify_payment_details_from_context(
+    context: &str,
+    expected_recipient: &str,
+    expected_amount: u64,
+    expected_currency: &str,
+) -> Result<()> {
+    msg!("=== Verifying Payment Details ===");
+    msg!("Context: {}", context);
+
+    // Validation constraints
+    require!(
+        !expected_recipient.is_empty(),
+        Secp256k1Error::InvalidBankAccount
+    );
+    require!(expected_amount > 0, Secp256k1Error::InvalidAmount);
+    require!(expected_currency == "KRW", Secp256k1Error::InvalidCurrency);
+
+    // Parse context JSON to extract payment details
+    // Context format example: {"extractedParameters":{"recipientAccount":"100000000000(토스뱅크)","senderNickname":"nickname","transactionAmount":"1,400원","date":"2024.01.01"}}
+
+    // Simple string-based validation (checking if expected values are present in context)
+    // This is a simplified approach - in production, you'd want proper JSON parsing
+
+    // Check recipient bank account
+    let recipient_found = context.contains(expected_recipient);
+    require!(recipient_found, Secp256k1Error::RecipientMismatch);
+    msg!("✓ Recipient bank account verified: {}", expected_recipient);
+
+    // Check amount (convert u64 to formatted string: 1400 -> "1,400원")
+    let formatted_amount = format_krw_amount(expected_amount);
+    let amount_found = context.contains(&formatted_amount);
+    require!(amount_found, Secp256k1Error::AmountMismatch);
+    msg!("✓ Payment amount verified: {} KRW", expected_amount);
+
+    // Currency is already validated above (must be KRW)
+    msg!("✓ Currency verified: {}", expected_currency);
+
+    msg!("Payment details verification successful!");
+    Ok(())
+}
+
 // ============================================================================
 // Account Structures
 // ============================================================================
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    pub signer: Signer<'info>,
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + PaymentConfig::INIT_SPACE,
+        seeds = [b"payment_config", authority.key().as_ref()],
+        bump,
+    )]
+    pub payment_config: Account<'info, PaymentConfig>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct VerifyProofSignatures<'info> {
     pub signer: Signer<'info>,
+
+    #[account(
+        seeds = [b"payment_config", signer.key().as_ref()],
+        bump,
+    )]
+    pub payment_config: Account<'info, PaymentConfig>,
 }
 
 // ============================================================================
 // Data Structures (zk-escrow compatible)
 // ============================================================================
+
+/// Payment validation configuration
+#[account]
+#[derive(InitSpace)]
+pub struct PaymentConfig {
+    pub authority: Pubkey,
+    #[max_len(100)]
+    pub recipient_bank_account: String,
+    pub allowed_amount: u64,
+    #[max_len(10)]
+    pub fiat_currency: String,
+}
 
 /// Claim information containing provider, parameters, and context
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
