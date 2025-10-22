@@ -31,12 +31,6 @@ pub fn serialise_claim_data(identifier: &str, owner: &str, timestamp_s: u32, epo
     )
 }
 
-/// Utility to convert a 0x-prefixed hex string into bytes.
-pub fn hex_str_to_bytes(hex_str: &str) -> Result<Vec<u8>> {
-    let stripped = hex_str.strip_prefix("0x").unwrap_or(hex_str);
-    hex::decode(stripped).map_err(|_| error!(Secp256k1Error::InvalidHex))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
