@@ -9,13 +9,16 @@ import {
 import {
   getProgram,
   getTokenEscrowProgram,
+  getNullifierProgram,
   loadProof,
   serializeSignature,
+  calculateNullifier,
 } from "./utils";
 
 describe("Integration Test - Complete Flow", () => {
   const escrowProgram = getTokenEscrowProgram();
   const verificationProgram = getProgram();
+  const nullifierProgram = getNullifierProgram();
   const provider = anchor.AnchorProvider.env();
   const connection = provider.connection;
   const payer = provider.wallet as anchor.Wallet;
@@ -26,6 +29,7 @@ describe("Integration Test - Complete Flow", () => {
   let escrowVault: anchor.web3.PublicKey;
   let escrowPda: anchor.web3.PublicKey;
   let paymentConfigPda: anchor.web3.PublicKey;
+  let nullifierRegistryPda: anchor.web3.PublicKey;
   const admin = payer.publicKey;
 
   before(async () => {
@@ -86,6 +90,13 @@ describe("Integration Test - Complete Flow", () => {
     );
     console.log("Payment Config PDA:", paymentConfigPda.toBase58());
 
+    // Find nullifier registry PDA
+    [nullifierRegistryPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("nullifier_registry")],
+      nullifierProgram.programId
+    );
+    console.log("Nullifier Registry PDA:", nullifierRegistryPda.toBase58());
+
     // Create escrow vault (token account owned by escrow PDA)
     const escrowVaultInfo = await getOrCreateAssociatedTokenAccount(
       connection,
@@ -96,6 +107,17 @@ describe("Integration Test - Complete Flow", () => {
     );
     escrowVault = escrowVaultInfo.address;
     console.log("Escrow vault:", escrowVault.toBase58());
+
+    // Initialize nullifier registry
+    await nullifierProgram.methods
+      .initialize()
+      .accounts({
+        registry: nullifierRegistryPda,
+        authority: payer.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+    console.log("Nullifier registry initialized");
   });
 
   it("Step 1: Initialize payment config in verification program", async () => {
@@ -215,6 +237,16 @@ describe("Integration Test - Complete Flow", () => {
 
     console.log("Proof context:", fixture.claimInfo.context);
 
+    // Calculate nullifier deterministically from proof context
+    const nullifierHash = calculateNullifier(fixture.claimInfo.context);
+    console.log("Calculated nullifier hash:", nullifierHash);
+
+    // Find nullifier record PDA
+    const [nullifierRecordPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("nullifier"), Buffer.from(nullifierHash)],
+      nullifierProgram.programId
+    );
+
     const userBalanceBefore = await connection.getTokenAccountBalance(
       userTokenAccount
     );
@@ -234,6 +266,10 @@ describe("Integration Test - Complete Flow", () => {
         tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         verificationProgram: verificationProgram.programId,
         paymentConfig: paymentConfigPda,
+        nullifierProgram: nullifierProgram.programId,
+        nullifierRegistry: nullifierRegistryPda,
+        nullifierRecord: nullifierRecordPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc();
 

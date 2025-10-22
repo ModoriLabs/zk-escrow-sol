@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use solana_program::keccak;
 
+use nullifier_registry;
 use zk_escrow_sol;
 
 declare_id!("EsF9CU3PUf1nQZYFDaq9ws3b8YfbsC84s2MSDbSX8znw");
@@ -77,7 +79,7 @@ pub mod token_escrow {
 
         let verification_result = zk_escrow_sol::cpi::verify_proof_signatures(
             cpi_ctx,
-            proof,
+            proof.clone(),
             expected_witnesses,
             required_threshold,
         );
@@ -85,6 +87,24 @@ pub mod token_escrow {
         require!(verification_result.is_ok(), EscrowError::ProofVerificationFailed);
 
         msg!("Proof verified successfully via CPI");
+
+        // Calculate nullifier hash from proof context (deterministic)
+        let nullifier_hash = calculate_nullifier(&proof.claim_info.context)?;
+        msg!("Calculated nullifier hash: {}", nullifier_hash);
+
+        // Mark nullifier as used to prevent replay attacks
+        let nullifier_cpi_program = ctx.accounts.nullifier_program.to_account_info();
+        let nullifier_cpi_accounts = nullifier_registry::cpi::accounts::MarkNullifier {
+            registry: ctx.accounts.nullifier_registry.to_account_info(),
+            nullifier_record: ctx.accounts.nullifier_record.to_account_info(),
+            user: ctx.accounts.user.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+        };
+        let nullifier_cpi_ctx = CpiContext::new(nullifier_cpi_program, nullifier_cpi_accounts);
+
+        nullifier_registry::cpi::mark_nullifier(nullifier_cpi_ctx, nullifier_hash)?;
+
+        msg!("Nullifier marked as used");
 
         // Transfer tokens from escrow vault to user
         let seeds = &[
@@ -203,6 +223,19 @@ pub struct Withdraw<'info> {
 
     /// CHECK: Payment config PDA from verification program
     pub payment_config: AccountInfo<'info>,
+
+    /// CHECK: Nullifier program
+    pub nullifier_program: AccountInfo<'info>,
+
+    /// CHECK: Nullifier registry PDA (must be mutable)
+    #[account(mut)]
+    pub nullifier_registry: AccountInfo<'info>,
+
+    /// CHECK: Nullifier record PDA (will be created by CPI, must be mutable)
+    #[account(mut)]
+    pub nullifier_record: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -222,6 +255,45 @@ pub struct AdminWithdraw<'info> {
     pub escrow_vault: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Calculate deterministic nullifier hash from proof context
+/// Format: keccak256(senderNickname + transactionDate)
+fn calculate_nullifier(context: &str) -> Result<String> {
+    // Parse JSON context
+    let parsed: serde_json::Value = serde_json::from_str(context)
+        .map_err(|_| EscrowError::InvalidContext)?;
+
+    // Extract extractedParameters
+    let params = parsed.get("extractedParameters")
+        .ok_or(EscrowError::InvalidContext)?;
+
+    // Extract senderNickname and transactionDate
+    let sender_nickname = params.get("senderNickname")
+        .and_then(|v| v.as_str())
+        .ok_or(EscrowError::MissingSenderNickname)?;
+
+    let transaction_date = params.get("transactionDate")
+        .and_then(|v| v.as_str())
+        .ok_or(EscrowError::MissingTransactionDate)?;
+
+    // Create nullifier data
+    let nullifier_data = format!("{}{}", sender_nickname, transaction_date);
+    msg!("Nullifier data: {}", nullifier_data);
+
+    // Hash using keccak256
+    let hash = keccak::hash(nullifier_data.as_bytes());
+
+    // Convert to hex string (first 16 bytes to stay within 32 byte limit)
+    let hash_str = hex::encode(&hash.0[..16]);
+
+    msg!("Nullifier hash (32 chars): {}", hash_str);
+
+    Ok(hash_str)
 }
 
 // ============================================================================
@@ -254,6 +326,9 @@ pub enum EscrowError {
     #[msg("Arithmetic overflow")]
     Overflow,
 
+    #[msg("Nullifier hash cannot be empty")]
+    InvalidNullifier,
+
     #[msg("Arithmetic underflow")]
     Underflow,
 
@@ -268,4 +343,13 @@ pub enum EscrowError {
 
     #[msg("Proof verification failed")]
     ProofVerificationFailed,
+
+    #[msg("Invalid context format")]
+    InvalidContext,
+
+    #[msg("Missing senderNickname in context")]
+    MissingSenderNickname,
+
+    #[msg("Missing transactionDate in context")]
+    MissingTransactionDate,
 }

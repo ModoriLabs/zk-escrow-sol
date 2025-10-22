@@ -1,0 +1,19 @@
+[package]
+name = "nullifier-registry"
+version = "0.1.0"
+description = "Nullifier registry to prevent proof replay attacks"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "nullifier_registry"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.29.0"
