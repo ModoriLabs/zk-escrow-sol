@@ -10,8 +10,13 @@ pub use contexts::*;
 pub mod spl_nft {
 
     use super::*;
-    pub fn create_collection(ctx: Context<CreateCollection>) -> Result<()> {
-        ctx.accounts.create_collection(&ctx.bumps)
+    pub fn create_collection(
+        ctx: Context<CreateCollection>,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
+        ctx.accounts.create_collection(&ctx.bumps, name, symbol, uri)
     }
 
     pub fn mint_nft(ctx: Context<MintNFT>) -> Result<()> {
