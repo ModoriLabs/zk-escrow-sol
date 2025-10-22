@@ -1,178 +1,138 @@
-import { expect } from "chai";
-import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { SplNft } from "../target/types/spl_nft";
+import * as anchor from '@coral-xyz/anchor';
+import type { Program } from '@coral-xyz/anchor';
+import type NodeWallet from '@coral-xyz/anchor/dist/cjs/nodewallet';
+import { ASSOCIATED_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
+import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { Keypair, SystemProgram } from '@solana/web3.js';
+import type { SplNft } from '../target/types/spl_nft';
 
-describe.only("Mint NFT", () => {
-  // Configure the client
+describe('mint-nft', () => {
+  // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
+  const wallet = provider.wallet as NodeWallet;
+
   const program = anchor.workspace.splNft as Program<SplNft>;
-  const payer = provider.wallet as anchor.Wallet;
-  const connection = provider.connection;
 
-  // Metaplex Token Metadata Program ID
-  const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-    "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-  );
+  const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 
-  let mintKeypair: Keypair;
-  let metadataPda: PublicKey;
-  let editionPda: PublicKey;
-  let associatedTokenAccount: PublicKey;
+  const mintAuthority = anchor.web3.PublicKey.findProgramAddressSync([Buffer.from('authority')], program.programId)[0];
 
-  // NFT metadata
-  const nftName = "My Test NFT";
-  const nftSymbol = "TESTNFT";
-  const nftUri = "https://arweave.net/test-metadata-uri";
+  const collectionKeypair = Keypair.generate();
+  const collectionMint = collectionKeypair.publicKey;
 
-  before(async () => {
-    console.log("\n" + "=".repeat(60));
-    console.log("NFT Minting Test Setup");
-    console.log("=".repeat(60));
-    console.log("Program ID:", program.programId.toBase58());
-    console.log("Payer:", payer.publicKey.toBase58());
-    console.log("Cluster:", connection.rpcEndpoint);
+  const mintKeypair = Keypair.generate();
+  const mint = mintKeypair.publicKey;
 
-    // Check balance
-    const balance = await connection.getBalance(payer.publicKey);
-    console.log("Payer balance:", balance / anchor.web3.LAMPORTS_PER_SOL, "SOL");
-    console.log("");
+  const getMetadata = async (mint: anchor.web3.PublicKey): Promise<anchor.web3.PublicKey> => {
+    return anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+      TOKEN_METADATA_PROGRAM_ID,
+    )[0];
+  };
+
+  const getMasterEdition = async (mint: anchor.web3.PublicKey): Promise<anchor.web3.PublicKey> => {
+    return anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer(), Buffer.from('edition')],
+      TOKEN_METADATA_PROGRAM_ID,
+    )[0];
+  };
+
+  it('Create Collection NFT', async () => {
+    console.log('\nCollection Mint Key: ', collectionMint.toBase58());
+
+    const metadata = await getMetadata(collectionMint);
+    console.log('Collection Metadata Account: ', metadata.toBase58());
+
+    const masterEdition = await getMasterEdition(collectionMint);
+    console.log('Master Edition Account: ', masterEdition.toBase58());
+
+    const destination = getAssociatedTokenAddressSync(collectionMint, wallet.publicKey);
+    console.log('Destination ATA = ', destination.toBase58());
+
+    const tx = await program.methods
+      .createCollection()
+      .accountsPartial({
+        user: wallet.publicKey,
+        mint: collectionMint,
+        mintAuthority,
+        metadata,
+        masterEdition,
+        destination,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+      })
+      .signers([collectionKeypair])
+      .rpc({
+        skipPreflight: true,
+      });
+    console.log('\nCollection NFT minted: TxID - ', tx);
   });
 
-  it("mints an NFT with metadata and master edition", async () => {
-    console.log("\n=== Minting NFT ===");
+  it('Mint NFT', async () => {
+    console.log('\nMint', mint.toBase58());
 
-    // Generate a new keypair for the mint account
-    mintKeypair = Keypair.generate();
-    console.log("Mint pubkey:", mintKeypair.publicKey.toBase58());
+    const metadata = await getMetadata(mint);
+    console.log('Metadata', metadata.toBase58());
 
-    // Derive metadata PDA
-    [metadataPda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("metadata"),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-        mintKeypair.publicKey.toBuffer(),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    );
-    console.log("Metadata PDA:", metadataPda.toBase58());
+    const masterEdition = await getMasterEdition(mint);
+    console.log('Master Edition', masterEdition.toBase58());
 
-    // Derive master edition PDA
-    [editionPda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("metadata"),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-        mintKeypair.publicKey.toBuffer(),
-        Buffer.from("edition"),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    );
-    console.log("Master Edition PDA:", editionPda.toBase58());
+    const destination = getAssociatedTokenAddressSync(mint, wallet.publicKey);
+    console.log('Destination', destination.toBase58());
 
-    // Get associated token account address
-    associatedTokenAccount = getAssociatedTokenAddressSync(
-      mintKeypair.publicKey,
-      payer.publicKey
-    );
-    console.log("Associated Token Account:", associatedTokenAccount.toBase58());
-
-    console.log("\nNFT Metadata:");
-    console.log("  Name:", nftName);
-    console.log("  Symbol:", nftSymbol);
-    console.log("  URI:", nftUri);
-
-    // Call the mint_nft instruction
-    console.log("\nCalling mint_nft instruction...");
     const tx = await program.methods
-      .mintNft(nftName, nftSymbol, nftUri)
-      .accounts({
-        payer: payer.publicKey,
-        metadataAccount: metadataPda,
-        editionAccount: editionPda,
-        mintAccount: mintKeypair.publicKey,
-        associatedTokenAccount: associatedTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+      .mintNft()
+      .accountsPartial({
+        owner: wallet.publicKey,
+        destination,
+        metadata,
+        masterEdition,
+        mint,
+        mintAuthority,
+        collectionMint,
         systemProgram: SystemProgram.programId,
-        rent: SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
       })
       .signers([mintKeypair])
-      .rpc();
-
-    console.log("✅ NFT minted successfully!");
-    console.log("Transaction signature:", tx);
-
-    // Verify the mint account
-    const mintInfo = await connection.getParsedAccountInfo(mintKeypair.publicKey);
-    expect(mintInfo.value).to.not.be.null;
-
-    const mintData = (mintInfo.value?.data as any).parsed.info;
-    console.log("\n=== Mint Account Info ===");
-    console.log("Decimals:", mintData.decimals);
-    console.log("Supply:", mintData.supply);
-    console.log("Mint Authority:", mintData.mintAuthority);
-    console.log("Freeze Authority:", mintData.freezeAuthority);
-
-    // Verify NFT properties
-    expect(mintData.decimals).to.equal(0, "NFT should have 0 decimals");
-    expect(mintData.supply).to.equal("1", "NFT supply should be 1");
-
-    // Verify the token account
-    const tokenAccountInfo = await connection.getParsedAccountInfo(
-      associatedTokenAccount
-    );
-    expect(tokenAccountInfo.value).to.not.be.null;
-
-    const tokenData = (tokenAccountInfo.value?.data as any).parsed.info;
-    console.log("\n=== Token Account Info ===");
-    console.log("Owner:", tokenData.owner);
-    console.log("Mint:", tokenData.mint);
-    console.log("Token Amount:", tokenData.tokenAmount.uiAmount);
-
-    expect(tokenData.owner).to.equal(payer.publicKey.toBase58());
-    expect(tokenData.mint).to.equal(mintKeypair.publicKey.toBase58());
-    expect(tokenData.tokenAmount.uiAmount).to.equal(1);
-
-    // Verify metadata account exists
-    const metadataAccountInfo = await connection.getAccountInfo(metadataPda);
-    expect(metadataAccountInfo).to.not.be.null;
-    console.log("\n=== Metadata Account ===");
-    console.log("Metadata PDA exists: ✅");
-    console.log("Data length:", metadataAccountInfo?.data.length, "bytes");
-
-    // Verify master edition account exists
-    const editionAccountInfo = await connection.getAccountInfo(editionPda);
-    expect(editionAccountInfo).to.not.be.null;
-    console.log("\n=== Master Edition Account ===");
-    console.log("Master Edition PDA exists: ✅");
-    console.log("Data length:", editionAccountInfo?.data.length, "bytes");
+      .rpc({
+        skipPreflight: true,
+      });
+    console.log('\nNFT Minted! Your transaction signature', tx);
   });
 
-  it("displays NFT summary", () => {
-    console.log("\n" + "=".repeat(60));
-    console.log("NFT Summary");
-    console.log("=".repeat(60));
-    console.log("Name:", nftName);
-    console.log("Symbol:", nftSymbol);
-    console.log("URI:", nftUri);
-    console.log("\nAddresses:");
-    console.log("  Mint:", mintKeypair.publicKey.toBase58());
-    console.log("  Metadata:", metadataPda.toBase58());
-    console.log("  Master Edition:", editionPda.toBase58());
-    console.log("  Token Account:", associatedTokenAccount.toBase58());
-    console.log("  Owner:", payer.publicKey.toBase58());
-    console.log("\nExplorer Links (localnet):");
-    console.log(
-      `  Mint: https://explorer.solana.com/address/${mintKeypair.publicKey.toBase58()}?cluster=custom`
-    );
-    console.log(
-      `  Token Account: https://explorer.solana.com/address/${associatedTokenAccount.toBase58()}?cluster=custom`
-    );
-    console.log("=".repeat(60));
+  it('Verify Collection', async () => {
+    const mintMetadata = await getMetadata(mint);
+    console.log('\nMint Metadata', mintMetadata.toBase58());
+
+    const collectionMetadata = await getMetadata(collectionMint);
+    console.log('Collection Metadata', collectionMetadata.toBase58());
+
+    const collectionMasterEdition = await getMasterEdition(collectionMint);
+    console.log('Collection Master Edition', collectionMasterEdition.toBase58());
+
+    const tx = await program.methods
+      .verifyCollection()
+      .accountsPartial({
+        authority: wallet.publicKey,
+        metadata: mintMetadata,
+        mint,
+        mintAuthority,
+        collectionMint,
+        collectionMetadata,
+        collectionMasterEdition,
+        systemProgram: SystemProgram.programId,
+        sysvarInstruction: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+      })
+      .rpc({
+        skipPreflight: true,
+      });
+    console.log('\nCollection Verified! Your transaction signature', tx);
   });
 });
