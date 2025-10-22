@@ -17,10 +17,9 @@ default = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 
 [dependencies]
-anchor-lang = "0.32.1"
-anchor-spl = "0.32.1"
+anchor-lang = "0.29.0"
+anchor-spl = "0.29.0"
 zk-escrow-sol = { path = "../zk-escrow-sol", features = ["cpi"] }
 nullifier-registry = { path = "../nullifier-registry", features = ["cpi"] }
 serde_json = "1.0"
-solana-program = "2.1"
 hex = "0.4"
