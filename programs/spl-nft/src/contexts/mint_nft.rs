@@ -59,6 +59,12 @@ pub struct MintNFT<'info> {
     pub mint_authority: UncheckedAccount<'info>,
     #[account(mut)]
     pub collection_mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        seeds = [b"collection_state", collection_mint.key().as_ref()],
+        bump,
+    )]
+    pub collection_state: Account<'info, super::create_collection::CollectionState>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -101,6 +107,11 @@ impl<'info> MintNFT<'info> {
             },
         ];
 
+        // Increment counter and build URI
+        self.collection_state.counter += 1;
+        let token_id = self.collection_state.counter;
+        let uri = format!("{}/{}", self.collection_state.uri_prefix, token_id);
+
         let metadata_account = CreateMetadataAccountV3Cpi::new(
             spl_metadata_program,
             CreateMetadataAccountV3CpiAccounts {
@@ -114,9 +125,9 @@ impl<'info> MintNFT<'info> {
             },
             CreateMetadataAccountV3InstructionArgs {
                 data: DataV2 {
-                    name: "Mint Test".to_string(),
-                    symbol: "YAY".to_string(),
-                    uri: "".to_string(),
+                    name: self.collection_state.name.clone(),
+                    symbol: self.collection_state.symbol.clone(),
+                    uri,
                     seller_fee_basis_points: 0,
                     creators: Some(creator),
                     collection: Some(Collection {
