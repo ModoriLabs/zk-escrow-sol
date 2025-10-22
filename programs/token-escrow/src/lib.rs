@@ -65,14 +65,13 @@ pub mod token_escrow {
         let escrow = &ctx.accounts.escrow;
 
         // Verify proof via CPI to verification program
-        // Use verification program, expected_witnesses and threshold from escrow configuration
         let required_threshold = escrow.required_threshold;
         let expected_witnesses = escrow.expected_witnesses.clone();
 
-        // Use verification program from context (validated by constraint to match stored program)
         let cpi_program = ctx.accounts.verification_program.to_account_info();
         let cpi_accounts = zk_escrow_sol::cpi::accounts::VerifyProofSignatures {
             signer: ctx.accounts.user.to_account_info(),
+            payment_config: ctx.accounts.payment_config.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
@@ -201,6 +200,9 @@ pub struct Withdraw<'info> {
     /// CHECK: Verification program loaded from escrow config
     #[account(constraint = verification_program.key() == escrow.verification_program)]
     pub verification_program: AccountInfo<'info>,
+
+    /// CHECK: Payment config PDA from verification program
+    pub payment_config: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
