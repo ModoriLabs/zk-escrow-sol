@@ -26,6 +26,15 @@ use anchor_spl::metadata::mpl_token_metadata::{
     }
 };
 
+#[account]
+pub struct CollectionState {
+    pub collection_mint: Pubkey,
+    pub name: String,
+    pub symbol: String,
+    pub uri_prefix: String,
+    pub counter: u64,
+}
+
 #[derive(Accounts)]
 pub struct CreateCollection<'info> {
     #[account(mut)]
@@ -38,6 +47,14 @@ pub struct CreateCollection<'info> {
         mint::freeze_authority = mint_authority,
     )]
     mint: Account<'info, Mint>,
+    #[account(
+        init,
+        payer = user,
+        space = 8 + 32 + 4 + 64 + 4 + 32 + 4 + 200 + 8,
+        seeds = [b"collection_state", mint.key().as_ref()],
+        bump,
+    )]
+    pub collection_state: Account<'info, CollectionState>,
     #[account(
         seeds = [b"authority"],
         bump,
@@ -64,7 +81,13 @@ pub struct CreateCollection<'info> {
 }
 
 impl<'info> CreateCollection<'info> {
-    pub fn create_collection(&mut self, bumps: &CreateCollectionBumps) -> Result<()> {
+    pub fn create_collection(
+        &mut self,
+        bumps: &CreateCollectionBumps,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
 
         let metadata = &self.metadata.to_account_info();
         let master_edition = &self.master_edition.to_account_info();
@@ -112,9 +135,9 @@ impl<'info> CreateCollection<'info> {
             },
             CreateMetadataAccountV3InstructionArgs {
                 data: DataV2 {
-                    name: "DummyCollection".to_owned(),
-                    symbol: "DC".to_owned(),
-                    uri: "".to_owned(),
+                    name: name.clone(),
+                    symbol: symbol.clone(),
+                    uri: uri.clone(),
                     seller_fee_basis_points: 0,
                     creators: Some(creator),
                     collection: None,
@@ -150,6 +173,13 @@ impl<'info> CreateCollection<'info> {
         );
         master_edition_account.invoke_signed(signer_seeds)?;
         msg!("Master Edition Account created");
+
+        // Initialize collection state
+        self.collection_state.collection_mint = self.mint.key();
+        self.collection_state.name = name;
+        self.collection_state.symbol = symbol;
+        self.collection_state.uri_prefix = uri;
+        self.collection_state.counter = 0;
 
         Ok(())
     }

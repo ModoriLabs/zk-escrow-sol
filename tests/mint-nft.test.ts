@@ -22,6 +22,11 @@ describe('mint-nft', () => {
   const collectionKeypair = Keypair.generate();
   const collectionMint = collectionKeypair.publicKey;
 
+  const [collectionState] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from('collection_state'), collectionMint.toBuffer()],
+    program.programId
+  );
+
   const mintKeypair = Keypair.generate();
   const mint = mintKeypair.publicKey;
 
@@ -52,10 +57,15 @@ describe('mint-nft', () => {
     console.log('Destination ATA = ', destination.toBase58());
 
     const tx = await program.methods
-      .createCollection()
+      .createCollection(
+        "KCONA",                    // name
+        "KCONA",                    // symbol
+        "https://kcona.io/metadata" // uri prefix
+      )
       .accounts({
         user: wallet.publicKey,
         mint: collectionMint,
+        collectionState,
         mintAuthority,
         metadata,
         masterEdition,
@@ -94,6 +104,7 @@ describe('mint-nft', () => {
         mint,
         mintAuthority,
         collectionMint,
+        collectionState,
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
