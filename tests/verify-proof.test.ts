@@ -1,9 +1,87 @@
 import { expect } from "chai";
+import * as anchor from "@coral-xyz/anchor";
 import { loadProof, getProgram, serializeSignature } from "./utils";
 
 describe("verify_proof_signatures (original proof.json)", () => {
   const program = getProgram();
   const fixture = loadProof();
+  const provider = anchor.AnchorProvider.env();
+  const payer = provider.wallet as anchor.Wallet;
+
+  let paymentConfigPda: anchor.web3.PublicKey;
+
+  before(async () => {
+    // Find payment config PDA
+    [paymentConfigPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("payment_config"), payer.publicKey.toBuffer()],
+      program.programId
+    );
+
+    // Initialize payment config if not exists
+    try {
+      const recipientBankAccount = "100202642943(토스뱅크)";
+      const allowedAmount = new anchor.BN(1000);
+      const fiatCurrency = "KRW";
+
+      await program.methods
+        .initialize(recipientBankAccount, allowedAmount, fiatCurrency)
+        .accounts({
+          paymentConfig: paymentConfigPda,
+          authority: payer.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+      console.log("✅ Payment config initialized");
+    } catch (e: any) {
+      if (e.message && e.message.includes("already in use")) {
+        console.log("✅ Payment config already initialized");
+      } else {
+        throw e;
+      }
+    }
+  });
+
+  it("verifies only proof signatures (no payment validation)", async () => {
+    console.log("\n=== Testing verify_proof_only (no payment validation) ===");
+
+    // Prepare proof structure matching our Solana types
+    const proof = {
+      claimInfo: {
+        provider: fixture.claimInfo.provider,
+        // parameters: fixture.claimInfo.parameters,
+        parameters: "",
+        context: fixture.claimInfo.context,
+      },
+      signedClaim: {
+        claim: {
+          identifier: fixture.signedClaim.claim.identifier,
+          owner: fixture.signedClaim.claim.owner,
+          timestampS: fixture.signedClaim.claim.timestampS,
+          epoch: fixture.signedClaim.claim.epoch,
+        },
+        signatures: fixture.signedClaim.signatures.map((sig) =>
+          Buffer.from(serializeSignature(sig))
+        ),
+      },
+    };
+
+    // Expected witnesses (single witness in our fixture)
+    const expectedWitnesses = [fixture.expectedWitness];
+
+    // Required threshold (at least 1 valid signature)
+    const requiredThreshold = 1;
+    // Call verify_proof_only
+    const tx = await program.methods
+      .verifyProofOnly(proof, expectedWitnesses, requiredThreshold)
+      .accounts({
+        signer: payer.publicKey,
+        paymentConfig: paymentConfigPda,
+      })
+      .rpc();
+
+    console.log("✅ Transaction signature:", tx);
+    console.log("✅ Proof verified successfully!");
+  });
 
   it("verifies a complete proof with valid witness signature", async () => {
     console.log("\n=== Testing verify_proof_signatures (original proof) ===");
@@ -46,6 +124,10 @@ describe("verify_proof_signatures (original proof.json)", () => {
     // Call verify_proof_signatures
     const tx = await program.methods
       .verifyProofSignatures(proof, expectedWitnesses, requiredThreshold)
+      .accounts({
+        signer: payer.publicKey,
+        paymentConfig: paymentConfigPda,
+      })
       .rpc();
 
     console.log("✅ Transaction signature:", tx);
@@ -80,6 +162,10 @@ describe("verify_proof_signatures (original proof.json)", () => {
     try {
       await program.methods
         .verifyProofSignatures(proof, wrongWitnesses, requiredThreshold)
+        .accounts({
+          signer: payer.publicKey,
+          paymentConfig: paymentConfigPda,
+        })
         .rpc();
 
       throw new Error("Expected transaction to fail but it succeeded");
@@ -116,6 +202,10 @@ describe("verify_proof_signatures (original proof.json)", () => {
     try {
       await program.methods
         .verifyProofSignatures(proof, expectedWitnesses, requiredThreshold)
+        .accounts({
+          signer: payer.publicKey,
+          paymentConfig: paymentConfigPda,
+        })
         .rpc();
 
       throw new Error("Expected transaction to fail but it succeeded");

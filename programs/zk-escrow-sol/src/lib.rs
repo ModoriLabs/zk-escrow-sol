@@ -61,7 +61,7 @@ pub mod zk_escrow_sol {
         required_threshold: u8,
     ) -> Result<()> {
         // Verify proof signatures
-        verify_proof_internal(&proof, &expected_witnesses, required_threshold)?;
+        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
 
         // Verify payment details from stored config
         let config = &ctx.accounts.payment_config;
@@ -74,13 +74,22 @@ pub mod zk_escrow_sol {
 
         Ok(())
     }
+
+    /// Verify proof without payment validation (for unit testing)
+    /// This exposes the internal proof verification logic
+    pub fn verify_proof_only(
+        _ctx: Context<VerifyProofInternal>,
+        proof: Proof,
+        expected_witnesses: Vec<String>,
+        required_threshold: u8,
+    ) -> Result<()> {
+        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)
+    }
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-fn verify_proof_internal(
+/// Internal helper function for proof verification logic
+/// Called by both verify_proof_signatures and verify_proof_internal
+fn verify_proof_internal_logic(
     proof: &Proof,
     expected_witnesses: &Vec<String>,
     required_threshold: u8,
@@ -279,6 +288,11 @@ pub struct VerifyProofSignatures<'info> {
         bump,
     )]
     pub payment_config: Account<'info, PaymentConfig>,
+}
+
+#[derive(Accounts)]
+pub struct VerifyProofInternal<'info> {
+    pub signer: Signer<'info>,
 }
 
 // ============================================================================
