@@ -5,7 +5,7 @@ use anchor_lang::solana_program::keccak;
 use nullifier_registry;
 use zk_escrow_sol;
 
-declare_id!("BxaG13bDcy3YwQUfbJHYQQR6rAwt47acUuoSSWSMc1yt");
+declare_id!("2DpfMMJDsDF42bMQH2a7jV8Pk6fP7skSnCKVpXHiJzvp");
 
 #[program]
 pub mod token_escrow {
