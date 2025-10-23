@@ -2,13 +2,13 @@
 anchor_version = "0.29.0"
 
 [features]
-resolution = true
+seeds = false
 skip-lint = false
 
 [programs.localnet]
-zk_escrow_sol = "A8oUCtSKbVxthxxLiWNWnRBjhZYpJen2zC2wHGWrSqYb"
-token_escrow = "EsF9CU3PUf1nQZYFDaq9ws3b8YfbsC84s2MSDbSX8znw"
-nullifier_registry = "Nu11ifier1111111111111111111111111111111111"
+nullifier_registry = "J3tkLEXB6vvj9wKDbsKFcUiCma82Hw5iV2qTjvNGsofh"
+token_escrow = "2DpfMMJDsDF42bMQH2a7jV8Pk6fP7skSnCKVpXHiJzvp"
+zk_escrow_sol = "944j5oBiD7kTvS2j2hYow4oq5MFLbPXaGF7ZHUG2Fpbu"
 
 [registry]
 url = "https://api.apr.dev"
@@ -20,8 +20,16 @@ wallet = "./deployer.json"
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.test.ts\""
 
+[test]
+startup_wait = 5000
+shutdown_wait = 2000
+upgradeable = false
+
 [test.validator]
+bind_address = "0.0.0.0"
 url = "https://api.devnet.solana.com"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
 
 [[test.validator.clone]]
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
