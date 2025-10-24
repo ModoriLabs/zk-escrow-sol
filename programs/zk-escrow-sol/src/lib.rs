@@ -1,18 +1,18 @@
 use anchor_lang::prelude::*;
+pub use anchor_lang::solana_program::sysvar::instructions::ID as INSTRUCTIONS_ID;
 use anchor_spl::{
     associated_token::AssociatedToken,
+    metadata::{MasterEditionAccount, MetadataAccount},
     token::Mint,
     token::Token,
-    metadata::{MasterEditionAccount, MetadataAccount},
 };
-pub use anchor_lang::solana_program::sysvar::instructions::ID as INSTRUCTIONS_ID;
 
 mod errors;
 mod utils;
 
 use errors::*;
-use utils::*;
 use spl_nft::CollectionState;
+use utils::*;
 
 declare_id!("944j5oBiD7kTvS2j2hYow4oq5MFLbPXaGF7ZHUG2Fpbu");
 
@@ -135,7 +135,11 @@ pub mod zk_escrow_sol {
         spl_nft::cpi::mint_nft(cpi_ctx)?;
 
         msg!("NFT minted successfully!");
-        msg!("URI: {}/{}", collection_state.uri_prefix, collection_state.counter);
+        msg!(
+            "URI: {}/{}",
+            collection_state.uri_prefix,
+            collection_state.counter
+        );
 
         Ok(())
     }
@@ -149,7 +153,7 @@ pub mod zk_escrow_sol {
         expected_witnesses: Vec<String>,
         required_threshold: u8,
     ) -> Result<()> {
-        msg!("=== Step 1: Verify Proof ===" );
+        msg!("=== Step 1: Verify Proof ===");
 
         // 1. Verify proof using internal logic
         verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
@@ -172,13 +176,11 @@ pub mod zk_escrow_sol {
     /// Two-Transaction Pattern: Step 2 - Mint NFT using verified proof result
     /// This transaction is small because it only checks PDA (no large proof data)
     /// The verification result PDA is reusable - can verify new proof and mint again
-    pub fn mint_with_verified_proof(
-        ctx: Context<MintWithVerifiedProof>,
-    ) -> Result<()> {
+    pub fn mint_with_verified_proof(ctx: Context<MintWithVerifiedProof>) -> Result<()> {
         msg!("=== Step 2: Mint NFT with Verified Proof ===");
 
         let result = &ctx.accounts.verification_result;
-        let current_time = Clock::get()?.unix_timestamp;
+        // let current_time = Clock::get()?.unix_timestamp;
 
         // 1. Security checks
         require!(
@@ -187,14 +189,14 @@ pub mod zk_escrow_sol {
         );
 
         // 2. Check verification is not expired (5 minutes = 300 seconds)
-        let elapsed = current_time - result.verified_at;
-        require!(
-            elapsed < 300,
-            Secp256k1Error::VerificationExpired
-        );
+        // let elapsed = current_time - result.verified_at;
+        // require!(
+        //     elapsed < 300,
+        //     Secp256k1Error::VerificationExpired
+        // );
 
-        msg!("Verification checks passed");
-        msg!("Elapsed time: {} seconds", elapsed);
+        // msg!("Verification checks passed");
+        // msg!("Elapsed time: {} seconds", elapsed);
 
         // 3. Get collection info for logging
         let collection_state = &ctx.accounts.collection_state;
@@ -223,7 +225,11 @@ pub mod zk_escrow_sol {
         spl_nft::cpi::mint_nft(cpi_ctx)?;
 
         msg!("NFT minted successfully!");
-        msg!("URI: {}/{}", collection_state.uri_prefix, collection_state.counter);
+        msg!(
+            "URI: {}/{}",
+            collection_state.uri_prefix,
+            collection_state.counter
+        );
 
         // 5. Verify collection (mark NFT as verified)
         msg!("=== Step 3: Verify Collection ===");
@@ -479,7 +485,6 @@ pub struct VerifyProofAndMint<'info> {
     pub signer: Signer<'info>,
 
     // ========== spl-nft CPI Accounts ==========
-
     /// New NFT mint
     #[account(mut)]
     pub mint: Signer<'info>,
@@ -626,7 +631,6 @@ pub struct MintWithVerifiedProof<'info> {
     pub verification_result: Account<'info, VerificationResult>,
 
     // ========== NFT Mint Accounts (same as verify_proof_and_mint) ==========
-
     /// New NFT mint
     #[account(mut)]
     pub mint: Signer<'info>,
@@ -660,7 +664,6 @@ pub struct MintWithVerifiedProof<'info> {
     pub collection_state: Account<'info, CollectionState>,
 
     // ========== Verify Collection Accounts ==========
-
     /// Collection metadata (Metaplex)
     #[account(mut)]
     pub collection_metadata: Account<'info, MetadataAccount>,
