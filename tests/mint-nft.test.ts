@@ -61,7 +61,8 @@ describe('mint-nft', () => {
       .createCollection(
         "KCONA",                    // name
         "KCONA",                    // symbol
-        "https://kcona.io/metadata" // uri prefix
+        "https://kcona.io/metadata", // uri prefix
+        new anchor.BN(1000)         // price (1000 KRW)
       )
       .accounts({
         user: wallet.publicKey,
@@ -125,12 +126,14 @@ describe('mint-nft', () => {
     console.log('Name:', collectionStateAccount.name);
     console.log('Symbol:', collectionStateAccount.symbol);
     console.log('URI Prefix:', collectionStateAccount.uriPrefix);
+    console.log('Price:', collectionStateAccount.price.toString());
 
     // Assert collection state
     assert.strictEqual(collectionStateAccount.counter.toNumber(), 1, 'Counter should be incremented to 1 after first mint');
     assert.strictEqual(collectionStateAccount.name, 'KCONA', 'Collection name should be KCONA');
     assert.strictEqual(collectionStateAccount.symbol, 'KCONA', 'Collection symbol should be KCONA');
     assert.strictEqual(collectionStateAccount.uriPrefix, 'https://kcona.io/metadata', 'URI prefix should be https://kcona.io/metadata');
+    assert.strictEqual(collectionStateAccount.price.toNumber(), 1000, 'Price should be 1000 KRW');
 
     // Fetch metadata account to verify URI
     const metadataAccountInfo = await provider.connection.getAccountInfo(metadata);
