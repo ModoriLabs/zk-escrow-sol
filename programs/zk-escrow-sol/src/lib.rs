@@ -1,10 +1,16 @@
 use anchor_lang::prelude::*;
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::Mint,
+    token::Token,
+};
 
 mod errors;
 mod utils;
 
 use errors::*;
 use utils::*;
+use spl_nft::CollectionState;
 
 declare_id!("944j5oBiD7kTvS2j2hYow4oq5MFLbPXaGF7ZHUG2Fpbu");
 
@@ -84,6 +90,54 @@ pub mod zk_escrow_sol {
         required_threshold: u8,
     ) -> Result<()> {
         verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)
+    }
+
+    /// Verify ZK proof and mint NFT
+    /// 1. Verify proof signatures
+    /// 2. Verify payment amount from collection price
+    /// 3. Mint NFT via CPI to spl-nft
+    pub fn verify_proof_and_mint(
+        ctx: Context<VerifyProofAndMint>,
+        proof: Proof,
+        expected_witnesses: Vec<String>,
+        required_threshold: u8,
+    ) -> Result<()> {
+        // 1. ZK Proof 검증
+        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
+
+        // 2. 결제 금액 검증 (collection_state.price 사용)
+        let collection_state = &ctx.accounts.collection_state;
+        verify_payment_amount(&proof.claim_info.context, collection_state.price)?;
+
+        msg!("Proof verified! Minting NFT...");
+        msg!("Collection: {}", collection_state.name);
+        msg!("Price: {} KRW", collection_state.price);
+        msg!("Counter: {}", collection_state.counter);
+
+        // 3. NFT Mint via CPI
+        let cpi_program = ctx.accounts.spl_nft_program.to_account_info();
+        let cpi_accounts = spl_nft::cpi::accounts::MintNFT {
+            owner: ctx.accounts.signer.to_account_info(),
+            mint: ctx.accounts.mint.to_account_info(),
+            destination: ctx.accounts.destination.to_account_info(),
+            metadata: ctx.accounts.metadata.to_account_info(),
+            master_edition: ctx.accounts.master_edition.to_account_info(),
+            mint_authority: ctx.accounts.mint_authority.to_account_info(),
+            collection_mint: ctx.accounts.collection_mint.to_account_info(),
+            collection_state: ctx.accounts.collection_state.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+            token_program: ctx.accounts.token_program.to_account_info(),
+            associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
+            token_metadata_program: ctx.accounts.token_metadata_program.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        spl_nft::cpi::mint_nft(cpi_ctx)?;
+
+        msg!("NFT minted successfully!");
+        msg!("URI: {}/{}", collection_state.uri_prefix, collection_state.counter);
+
+        Ok(())
     }
 }
 
@@ -258,6 +312,17 @@ fn verify_payment_details_from_context(
     Ok(())
 }
 
+/// Verify payment amount from proof context (simplified version)
+fn verify_payment_amount(context: &str, required_amount: u64) -> Result<()> {
+    let formatted_amount = format!("-{}", required_amount);
+    require!(
+        context.contains(&formatted_amount),
+        Secp256k1Error::AmountMismatch
+    );
+    msg!("✓ Payment amount verified: {} KRW", required_amount);
+    Ok(())
+}
+
 // ============================================================================
 // Account Structures
 // ============================================================================
@@ -293,6 +358,61 @@ pub struct VerifyProofSignatures<'info> {
 #[derive(Accounts)]
 pub struct VerifyProofInternal<'info> {
     pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct VerifyProofAndMint<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(
+        seeds = [b"payment_config", signer.key().as_ref()],
+        bump,
+    )]
+    pub payment_config: Account<'info, PaymentConfig>,
+
+    // ========== spl-nft CPI Accounts ==========
+
+    /// New NFT mint
+    #[account(mut)]
+    pub mint: Signer<'info>,
+
+    /// User's token account
+    #[account(mut)]
+    pub destination: AccountInfo<'info>,
+
+    /// CHECK: Metaplex metadata
+    #[account(mut)]
+    pub metadata: UncheckedAccount<'info>,
+
+    /// CHECK: Metaplex master edition
+    #[account(mut)]
+    pub master_edition: UncheckedAccount<'info>,
+
+    /// CHECK: spl-nft authority PDA
+    pub mint_authority: UncheckedAccount<'info>,
+
+    /// Collection mint
+    #[account(mut)]
+    pub collection_mint: Account<'info, Mint>,
+
+    /// Collection state (price 정보 포함)
+    #[account(
+        mut,
+        seeds = [b"collection_state", collection_mint.key().as_ref()],
+        bump,
+        seeds::program = spl_nft_program.key(),
+    )]
+    pub collection_state: Account<'info, CollectionState>,
+
+    // ========== Programs ==========
+    pub spl_nft_program: Program<'info, spl_nft::program::SplNft>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    /// CHECK: Token Metadata Program
+    pub token_metadata_program: UncheckedAccount<'info>,
 }
 
 // ============================================================================

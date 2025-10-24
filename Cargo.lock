@@ -2722,4 +2722,5 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "hex",
+ "spl-nft",
 ]
