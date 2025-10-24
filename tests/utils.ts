@@ -183,6 +183,21 @@ export function getNullifierProgram(): Program<any> {
 }
 
 /**
+ * Get SplNft Program instance
+ */
+export function getSplNftProgram(): Program<any> {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+
+  // Load IDL directly
+  const idlPath = path.join(__dirname, "../target/idl/spl_nft.json");
+  const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
+  const programId = new anchor.web3.PublicKey(idl.metadata.address);
+
+  return new Program(idl as any, programId, provider);
+}
+
+/**
  * Calculate deterministic nullifier hash from proof context
  * Must match on-chain calculation: keccak256(senderNickname + transactionDate)
  */

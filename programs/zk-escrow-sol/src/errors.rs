@@ -34,4 +34,13 @@ pub enum Secp256k1Error {
 
     #[msg("Payment amount mismatch")]
     AmountMismatch,
+
+    #[msg("Unauthorized: user does not own this verification result")]
+    UnauthorizedUser,
+
+    #[msg("Verification result has already been used")]
+    AlreadyUsed,
+
+    #[msg("Verification has expired (older than 5 minutes)")]
+    VerificationExpired,
 }
