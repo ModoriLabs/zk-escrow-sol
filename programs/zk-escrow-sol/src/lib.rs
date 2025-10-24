@@ -60,9 +60,6 @@ pub mod zk_escrow_sol {
         expected_witnesses: Vec<String>,
         required_threshold: u8,
     ) -> Result<()> {
-        // Verify proof signatures
-        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
-
         // Verify payment details from stored config
         let config = &ctx.accounts.payment_config;
         verify_payment_details_from_context(
@@ -71,6 +68,9 @@ pub mod zk_escrow_sol {
             config.allowed_amount,
             &config.fiat_currency,
         )?;
+
+        // Verify proof signatures
+        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
 
         Ok(())
     }
