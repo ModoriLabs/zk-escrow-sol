@@ -33,6 +33,7 @@ pub struct CollectionState {
     pub symbol: String,
     pub uri_prefix: String,
     pub counter: u64,
+    pub price: u64,
 }
 
 #[derive(Accounts)]
@@ -50,7 +51,7 @@ pub struct CreateCollection<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + 32 + 4 + 64 + 4 + 32 + 4 + 200 + 8,
+        space = 8 + 32 + 4 + 64 + 4 + 32 + 4 + 200 + 8 + 8,
         seeds = [b"collection_state", mint.key().as_ref()],
         bump,
     )]
@@ -87,6 +88,7 @@ impl<'info> CreateCollection<'info> {
         name: String,
         symbol: String,
         uri: String,
+        price: u64,
     ) -> Result<()> {
 
         let metadata = &self.metadata.to_account_info();
@@ -180,6 +182,7 @@ impl<'info> CreateCollection<'info> {
         self.collection_state.symbol = symbol;
         self.collection_state.uri_prefix = uri;
         self.collection_state.counter = 0;
+        self.collection_state.price = price;
 
         Ok(())
     }
