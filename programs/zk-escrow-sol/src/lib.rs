@@ -3,7 +3,9 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::Mint,
     token::Token,
+    metadata::{MasterEditionAccount, MetadataAccount},
 };
+pub use anchor_lang::solana_program::sysvar::instructions::ID as INSTRUCTIONS_ID;
 
 mod errors;
 mod utils;
@@ -222,6 +224,28 @@ pub mod zk_escrow_sol {
 
         msg!("NFT minted successfully!");
         msg!("URI: {}/{}", collection_state.uri_prefix, collection_state.counter);
+
+        // 5. Verify collection (mark NFT as verified)
+        msg!("=== Step 3: Verify Collection ===");
+
+        let verify_cpi_program = ctx.accounts.spl_nft_program.to_account_info();
+        let verify_cpi_accounts = spl_nft::cpi::accounts::VerifyCollectionMint {
+            authority: ctx.accounts.signer.to_account_info(),
+            metadata: ctx.accounts.metadata.to_account_info(),
+            mint: ctx.accounts.mint.to_account_info(),
+            mint_authority: ctx.accounts.mint_authority.to_account_info(),
+            collection_mint: ctx.accounts.collection_mint.to_account_info(),
+            collection_metadata: ctx.accounts.collection_metadata.to_account_info(),
+            collection_master_edition: ctx.accounts.collection_master_edition.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+            sysvar_instruction: ctx.accounts.sysvar_instruction.to_account_info(),
+            token_metadata_program: ctx.accounts.token_metadata_program.to_account_info(),
+        };
+
+        let verify_cpi_ctx = CpiContext::new(verify_cpi_program, verify_cpi_accounts);
+        spl_nft::cpi::verify_collection(verify_cpi_ctx)?;
+
+        msg!("Collection verified! NFT is now marked as verified: true");
 
         // Note: verification_result PDA remains open and can be reused
         // User can verify a new proof and mint another NFT using the same PDA
@@ -634,6 +658,20 @@ pub struct MintWithVerifiedProof<'info> {
         seeds::program = spl_nft_program.key(),
     )]
     pub collection_state: Account<'info, CollectionState>,
+
+    // ========== Verify Collection Accounts ==========
+
+    /// Collection metadata (Metaplex)
+    #[account(mut)]
+    pub collection_metadata: Account<'info, MetadataAccount>,
+
+    /// Collection master edition
+    pub collection_master_edition: Account<'info, MasterEditionAccount>,
+
+    /// Sysvar instruction account
+    #[account(address = INSTRUCTIONS_ID)]
+    /// CHECK: Sysvar instruction account that is being checked with an address constraint
+    pub sysvar_instruction: UncheckedAccount<'info>,
 
     // ========== Programs ==========
     pub spl_nft_program: Program<'info, spl_nft::program::SplNft>,
