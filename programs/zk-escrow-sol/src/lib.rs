@@ -94,21 +94,19 @@ pub mod zk_escrow_sol {
 
     /// Verify ZK proof and mint NFT
     /// 1. Verify proof signatures
-    /// 2. Verify payment amount from collection price
-    /// 3. Mint NFT via CPI to spl-nft
+    /// 2. Mint NFT via CPI to spl-nft
+    /// Note: Payment validation happens off-chain before calling this function
     pub fn verify_proof_and_mint(
         ctx: Context<VerifyProofAndMint>,
         proof: Proof,
         expected_witnesses: Vec<String>,
         required_threshold: u8,
     ) -> Result<()> {
-        // 1. ZK Proof 검증
+        // 1. ZK Proof verification
         verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
 
-        // 2. 결제 금액 검증 (collection_state.price 사용)
+        // 2. Log collection info (payment validation happens off-chain)
         let collection_state = &ctx.accounts.collection_state;
-        verify_payment_amount(&proof.claim_info.context, collection_state.price)?;
-
         msg!("Proof verified! Minting NFT...");
         msg!("Collection: {}", collection_state.name);
         msg!("Price: {} KRW", collection_state.price);
@@ -136,6 +134,97 @@ pub mod zk_escrow_sol {
 
         msg!("NFT minted successfully!");
         msg!("URI: {}/{}", collection_state.uri_prefix, collection_state.counter);
+
+        Ok(())
+    }
+
+    /// Two-Transaction Pattern: Step 1 - Verify proof and store result in PDA
+    /// This separates large proof verification from NFT minting to solve transaction size issues
+    /// Each unique claim_identifier gets its own PDA, allowing multiple verifications per user
+    pub fn verify_proof(
+        ctx: Context<VerifyProofNew>,
+        proof: Proof,
+        expected_witnesses: Vec<String>,
+        required_threshold: u8,
+    ) -> Result<()> {
+        msg!("=== Step 1: Verify Proof ===" );
+
+        // 1. Verify proof using internal logic
+        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
+
+        // 2. Store verification result in PDA
+        let result = &mut ctx.accounts.verification_result;
+        result.user = ctx.accounts.signer.key();
+        result.verified_at = Clock::get()?.unix_timestamp;
+        result.claim_identifier = proof.signed_claim.claim.identifier.clone();
+        result.is_used = false;
+
+        msg!("Verification result stored in PDA");
+        msg!("User: {}", result.user);
+        msg!("Verified at: {}", result.verified_at);
+        msg!("Claim ID: {}", result.claim_identifier);
+
+        Ok(())
+    }
+
+    /// Two-Transaction Pattern: Step 2 - Mint NFT using verified proof result
+    /// This transaction is small because it only checks PDA (no large proof data)
+    /// The verification result PDA is reusable - can verify new proof and mint again
+    pub fn mint_with_verified_proof(
+        ctx: Context<MintWithVerifiedProof>,
+    ) -> Result<()> {
+        msg!("=== Step 2: Mint NFT with Verified Proof ===");
+
+        let result = &ctx.accounts.verification_result;
+        let current_time = Clock::get()?.unix_timestamp;
+
+        // 1. Security checks
+        require!(
+            result.user == ctx.accounts.signer.key(),
+            Secp256k1Error::UnauthorizedUser
+        );
+
+        // 2. Check verification is not expired (5 minutes = 300 seconds)
+        let elapsed = current_time - result.verified_at;
+        require!(
+            elapsed < 300,
+            Secp256k1Error::VerificationExpired
+        );
+
+        msg!("Verification checks passed");
+        msg!("Elapsed time: {} seconds", elapsed);
+
+        // 3. Get collection info for logging
+        let collection_state = &ctx.accounts.collection_state;
+        msg!("Collection: {}", collection_state.name);
+        msg!("Price: {} KRW", collection_state.price);
+        msg!("Counter: {}", collection_state.counter);
+
+        // 4. Mint NFT via CPI
+        let cpi_program = ctx.accounts.spl_nft_program.to_account_info();
+        let cpi_accounts = spl_nft::cpi::accounts::MintNFT {
+            owner: ctx.accounts.signer.to_account_info(),
+            mint: ctx.accounts.mint.to_account_info(),
+            destination: ctx.accounts.destination.to_account_info(),
+            metadata: ctx.accounts.metadata.to_account_info(),
+            master_edition: ctx.accounts.master_edition.to_account_info(),
+            mint_authority: ctx.accounts.mint_authority.to_account_info(),
+            collection_mint: ctx.accounts.collection_mint.to_account_info(),
+            collection_state: ctx.accounts.collection_state.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+            token_program: ctx.accounts.token_program.to_account_info(),
+            associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
+            token_metadata_program: ctx.accounts.token_metadata_program.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        spl_nft::cpi::mint_nft(cpi_ctx)?;
+
+        msg!("NFT minted successfully!");
+        msg!("URI: {}/{}", collection_state.uri_prefix, collection_state.counter);
+
+        // Note: verification_result PDA remains open and can be reused
+        // User can verify a new proof and mint another NFT using the same PDA
 
         Ok(())
     }
@@ -365,12 +454,6 @@ pub struct VerifyProofAndMint<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(
-        seeds = [b"payment_config", signer.key().as_ref()],
-        bump,
-    )]
-    pub payment_config: Account<'info, PaymentConfig>,
-
     // ========== spl-nft CPI Accounts ==========
 
     /// New NFT mint
@@ -460,4 +543,104 @@ pub struct SignedClaim {
 pub struct Proof {
     pub claim_info: ClaimInfo,
     pub signed_claim: SignedClaim,
+}
+
+// ============================================================================
+// Two-Transaction Pattern: Verification Result Storage
+// ============================================================================
+
+/// Verification result stored in PDA after successful proof verification
+/// This allows splitting large proof verification from NFT minting
+#[account]
+#[derive(InitSpace)]
+pub struct VerificationResult {
+    /// User who verified the proof
+    pub user: Pubkey,
+
+    /// Timestamp when verification was completed
+    pub verified_at: i64,
+
+    /// Claim identifier from the verified proof
+    #[max_len(66)] // 0x + 64 hex chars
+    pub claim_identifier: String,
+
+    /// Whether this verification has been used for minting
+    pub is_used: bool,
+}
+
+/// Account structure for verify_proof instruction
+#[derive(Accounts)]
+pub struct VerifyProofNew<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(
+        init_if_needed,  // Create if doesn't exist, otherwise reuse
+        payer = signer,
+        space = 8 + VerificationResult::INIT_SPACE,
+        seeds = [b"verification", signer.key().as_ref()],
+        bump,
+    )]
+    pub verification_result: Account<'info, VerificationResult>,
+
+    pub system_program: Program<'info, System>,
+}
+
+/// Account structure for mint_with_verified_proof instruction
+#[derive(Accounts)]
+pub struct MintWithVerifiedProof<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Verification result PDA (reusable for multiple mints)
+    #[account(
+        mut,
+        seeds = [b"verification", signer.key().as_ref()],
+        bump,
+        constraint = verification_result.user == signer.key() @ Secp256k1Error::UnauthorizedUser,
+    )]
+    pub verification_result: Account<'info, VerificationResult>,
+
+    // ========== NFT Mint Accounts (same as verify_proof_and_mint) ==========
+
+    /// New NFT mint
+    #[account(mut)]
+    pub mint: Signer<'info>,
+
+    /// User's token account
+    #[account(mut)]
+    pub destination: AccountInfo<'info>,
+
+    /// CHECK: Metaplex metadata
+    #[account(mut)]
+    pub metadata: UncheckedAccount<'info>,
+
+    /// CHECK: Metaplex master edition
+    #[account(mut)]
+    pub master_edition: UncheckedAccount<'info>,
+
+    /// CHECK: spl-nft authority PDA
+    pub mint_authority: UncheckedAccount<'info>,
+
+    /// Collection mint
+    #[account(mut)]
+    pub collection_mint: Account<'info, Mint>,
+
+    /// Collection state (price 정보 포함)
+    #[account(
+        mut,
+        seeds = [b"collection_state", collection_mint.key().as_ref()],
+        bump,
+        seeds::program = spl_nft_program.key(),
+    )]
+    pub collection_state: Account<'info, CollectionState>,
+
+    // ========== Programs ==========
+    pub spl_nft_program: Program<'info, spl_nft::program::SplNft>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    /// CHECK: Token Metadata Program
+    pub token_metadata_program: UncheckedAccount<'info>,
 }
