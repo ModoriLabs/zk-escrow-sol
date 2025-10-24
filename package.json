@@ -7,7 +7,7 @@
         "deploy": "ts-node scripts/deploy.ts",
         "deploy:localnet": "ts-node scripts/deploy.ts",
         "deploy:devnet": "anchor deploy --provider.cluster devnet && ts-node scripts/deploy.ts",
-        "deploy-mockusdc": "ts-node scripts/deploy-mock-usdc.ts"
+        "upload-to-irys": "ts-node scripts/upload-to-irys.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.29.0",

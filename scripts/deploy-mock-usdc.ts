@@ -10,7 +10,6 @@ import { createMint, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/s
 import { Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { readFileSync, writeFileSync } from "fs";
 import path from "path";
-import { SplWithMetadata } from "../target/types/spl_with_metadata";
 
 async function main() {
   // Configure the client

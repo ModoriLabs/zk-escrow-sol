@@ -22,3 +22,17 @@ solana airdrop 100 ./deployer.json
 anchor deploy
 ```
 
+### Upload Image to Irys/Arweave
+Upload an image from the assets folder to Irys (Arweave) for decentralized storage:
+
+```sh
+npm run upload-to-irys <counter>
+```
+
+Example:
+```sh
+npm run upload-to-irys 1  # uploads assets/1.png
+npm run upload-to-irys 2  # uploads assets/2.png
+```
+
+This will return an Arweave URI that can be used for NFT metadata or token logos.
