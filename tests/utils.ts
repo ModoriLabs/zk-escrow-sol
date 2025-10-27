@@ -154,21 +154,6 @@ export function getProgram(): Program<ZkEscrowSol> {
 }
 
 /**
- * Get TokenEscrow Program instance
- */
-export function getTokenEscrowProgram(): Program<any> {
-  const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
-
-  // Load IDL directly
-  const idlPath = path.join(__dirname, "../target/idl/token_escrow.json");
-  const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
-  const programId = new anchor.web3.PublicKey(idl.metadata.address);
-
-  return new Program(idl as any, programId, provider);
-}
-
-/**
  * Get NullifierRegistry Program instance
  */
 export function getNullifierProgram(): Program<any> {

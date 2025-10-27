@@ -2,7 +2,6 @@
 
 This guide explains how to deploy and use the ZK Escrow system consisting of two programs:
 1. **zk-escrow-sol**: ZK proof verification program
-2. **token-escrow**: Token escrow program with proof-gated withdrawals
 
 ## Architecture
 
@@ -28,9 +27,7 @@ anchor build --arch sbf
 
 This generates:
 - `target/deploy/zk_escrow_sol.so`
-- `target/deploy/token_escrow.so`
 - `target/idl/zk_escrow_sol.json`
-- `target/idl/token_escrow.json`
 
 ## Deploy to Localnet
 
