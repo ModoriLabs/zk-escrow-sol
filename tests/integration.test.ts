@@ -138,15 +138,8 @@ describe("Integration Test - ZK Proof Verification and NFT Mint", () => {
       .accounts({
         user: payer.publicKey,
         mint: collectionMint,
-        collectionState,
-        mintAuthority,
         metadata: collectionMetadata,
         masterEdition: collectionMasterEdition,
-        destination: collectionDestination,
-        systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
       })
       .signers([collectionKeypair])
       .rpc({
@@ -175,9 +168,7 @@ describe("Integration Test - ZK Proof Verification and NFT Mint", () => {
     const tx = await zkEscrowSolProgram.methods
       .initialize(recipientBankAccount, allowedAmount, fiatCurrency)
       .accounts({
-        paymentConfig: paymentConfigPda,
         authority: payer.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc();
 
@@ -242,8 +233,6 @@ describe("Integration Test - ZK Proof Verification and NFT Mint", () => {
       .verifyProof(proof, expectedWitnesses, requiredThreshold)
       .accounts({
         signer: payer.publicKey,
-        verificationResult: verificationResultPda,
-        systemProgram: SystemProgram.programId,
       })
       .rpc({
         skipPreflight: true,
@@ -305,21 +294,14 @@ describe("Integration Test - ZK Proof Verification and NFT Mint", () => {
       .mintWithVerifiedProof()
       .accounts({
         signer: payer.publicKey,
-        verificationResult: verificationResultPda,
         mint: mint,
         destination: destination,
         metadata: metadata,
         masterEdition: masterEdition,
         mintAuthority: mintAuthority,
         collectionMint: collectionMint,
-        collectionState: collectionState,
         collectionMetadata: collectionMetadata,
         collectionMasterEdition: collectionMasterEdition,
-        sysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY,
-        splNftProgram: splNftProgram.programId,
-        systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
       })
       .preInstructions([computeBudgetIx])
@@ -366,7 +348,9 @@ describe("Integration Test - ZK Proof Verification and NFT Mint", () => {
     );
 
     // Step 2: Get token balance
-    const tokenBalance = await connection.getTokenAccountBalance(userTokenAccount);
+    const tokenBalance = await connection.getTokenAccountBalance(
+      userTokenAccount
+    );
     console.log("2️⃣ Fetched token balance:", tokenBalance.value.uiAmount);
 
     // Step 3: Find metadata PDA
@@ -503,8 +487,6 @@ describe("Integration Test - ZK Proof Verification and NFT Mint", () => {
       .verifyProof(proof, expectedWitnesses, requiredThreshold)
       .accounts({
         signer: payer.publicKey,
-        verificationResult: verificationResultPda2,
-        systemProgram: SystemProgram.programId,
       })
       .rpc({
         skipPreflight: true,
@@ -558,21 +540,14 @@ describe("Integration Test - ZK Proof Verification and NFT Mint", () => {
       .mintWithVerifiedProof()
       .accounts({
         signer: payer.publicKey,
-        verificationResult: verificationResultPda2,
         mint: mint2,
         destination: destination2,
         metadata: metadata2,
         masterEdition: masterEdition2,
         mintAuthority: mintAuthority,
         collectionMint: collectionMint,
-        collectionState: collectionState,
         collectionMetadata: collectionMetadata,
         collectionMasterEdition: collectionMasterEdition,
-        sysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY,
-        splNftProgram: splNftProgram.programId,
-        systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
       })
       .preInstructions([computeBudgetIx2])
