@@ -138,19 +138,14 @@ export function hashClaimInfo(claimInfo: ClaimInfo) {
 }
 
 /**
- * Get Program instance with latest IDL
- * Note: anchor.workspace sometimes has stale IDL cache, so we load directly from file
+ * Get Program instance
+ * Using workspace for Anchor 0.31.1 compatibility
  */
 export function getProgram(): Program<ZkEscrowSol> {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  // Load IDL directly to ensure we have the latest version
-  const idlPath = path.join(__dirname, "../target/idl/zk_escrow_sol.json");
-  const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
-  const programId = new anchor.web3.PublicKey(idl.metadata.address);
-
-  return new Program<ZkEscrowSol>(idl as any, programId, provider);
+  return anchor.workspace.ZkEscrowSol as Program<ZkEscrowSol>;
 }
 
 /**
@@ -160,12 +155,7 @@ export function getNullifierProgram(): Program<any> {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  // Load IDL directly
-  const idlPath = path.join(__dirname, "../target/idl/nullifier_registry.json");
-  const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
-  const programId = new anchor.web3.PublicKey(idl.metadata.address);
-
-  return new Program(idl as any, programId, provider);
+  return anchor.workspace.NullifierRegistry as Program<any>;
 }
 
 /**
@@ -175,12 +165,18 @@ export function getSplNftProgram(): Program<SplNft> {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  // Load IDL and keypair
-  const idlPath = path.join(__dirname, "../target/idl/spl_nft.json");
-  const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
-  const programId = new anchor.web3.PublicKey(idl.metadata.address);
+  return anchor.workspace.SplNft as Program<SplNft>;
+}
 
-  return new Program<SplNft>(idl, programId, provider);
+/**
+ * Get TokenEscrow Program instance
+ * Note: TokenEscrow program is not currently in the workspace, returning SplNft as placeholder
+ */
+export function getTokenEscrowProgram(): Program<any> {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+
+  return anchor.workspace.SplNft as Program<any>;
 }
 
 /**
