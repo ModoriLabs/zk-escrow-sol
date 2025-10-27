@@ -1,9 +1,9 @@
-import { expect } from "chai";
-import { Wallet, verifyMessage } from "ethers";
-import { hashClaimInfo, loadProof, serialiseClaimData } from "./utils";
-import dotenv from "dotenv";
+import { expect } from 'chai'
+import { Wallet, verifyMessage } from 'ethers'
+import { hashClaimInfo, loadProof, serialiseClaimData } from './utils'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
 /**
  * Test to verify that the signature in proof.json matches the serialized claim data
@@ -15,31 +15,31 @@ dotenv.config();
  * 4. Verify the recovered address matches expectedWitness
  */
 
-const WITNESS_PRIVATE_KEY = process.env.WITNESS_PRIVATE_KEY;
+const WITNESS_PRIVATE_KEY = process.env.WITNESS_PRIVATE_KEY
 
-describe("verify proof.json (static proof)", () => {
-  let proof: ReturnType<typeof loadProof>;
-  let wallet: Wallet;
-  let serializedMessage: string;
-  let identifier: string;
+describe('verify proof.json (static proof)', () => {
+  let proof: ReturnType<typeof loadProof>
+  let wallet: Wallet
+  let serializedMessage: string
+  let identifier: string
 
   before(() => {
     if (!WITNESS_PRIVATE_KEY) {
-      throw new Error("WITNESS_PRIVATE_KEY not found in .env file");
+      throw new Error('WITNESS_PRIVATE_KEY not found in .env file')
     }
 
     // Load proof data
-    proof = loadProof();
+    proof = loadProof()
 
     // Calculate identifier
-    identifier = hashClaimInfo(proof.claimInfo);
+    identifier = hashClaimInfo(proof.claimInfo)
 
     // Serialize claim data
-    serializedMessage = serialiseClaimData(proof.signedClaim.claim);
+    serializedMessage = serialiseClaimData(proof.signedClaim.claim)
 
     // Create wallet from private key
-    wallet = new Wallet(WITNESS_PRIVATE_KEY);
-  });
+    wallet = new Wallet(WITNESS_PRIVATE_KEY)
+  })
 
   // !NOTE: skip identifier verification
   // it("computes correct claim identifier from claimInfo", () => {
@@ -48,69 +48,66 @@ describe("verify proof.json (static proof)", () => {
   //   );
   // });
 
-  it("serializes claim data correctly", () => {
+  it('serializes claim data correctly', () => {
     // console.log("\n📝 Serialized claim data:");
     // console.log(serializedMessage);
     // console.log("\n📏 Message length:", serializedMessage.length, "bytes");
 
-    expect(serializedMessage).to.be.a("string");
-    expect(serializedMessage.length).to.be.greaterThan(0);
-  });
+    expect(serializedMessage).to.be.a('string')
+    expect(serializedMessage.length).to.be.greaterThan(0)
+  })
 
-  it("wallet address matches expected witness", () => {
+  it('wallet address matches expected witness', () => {
     // console.log("\n🔑 Wallet verification:");
     // console.log("  Wallet address:", wallet.address);
     // console.log("  Expected witness:", proof.expectedWitness);
 
     expect(wallet.address.toLowerCase()).to.equal(
-      proof.expectedWitness.toLowerCase()
-    );
-  });
+      proof.expectedWitness.toLowerCase(),
+    )
+  })
 
-  it("generates signature matching the fixture", async () => {
+  it('generates signature matching the fixture', async () => {
     // console.log("\n✍️  Signing message with private key...");
-    const generatedSignature = await wallet.signMessage(serializedMessage);
-    const originalSignature = proof.signedClaim.signatures[0];
+    const generatedSignature = await wallet.signMessage(serializedMessage)
+    const originalSignature = proof.signedClaim.signatures[0]
 
     // console.log("🔍 Signature comparison:");
     // console.log("  Original:  ", originalSignature);
     // console.log("  Generated: ", generatedSignature);
 
     expect(generatedSignature.toLowerCase()).to.equal(
-      originalSignature.toLowerCase()
-    );
+      originalSignature.toLowerCase(),
+    )
     // console.log("✅ Signatures match!");
-  });
+  })
 
-  it("signature recovers to expected witness address", () => {
-    console.log("\n🔐 Verifying signature recovery:");
-    const originalSignature = proof.signedClaim.signatures[0];
+  it('signature recovers to expected witness address', () => {
+    console.log('\n🔐 Verifying signature recovery:')
+    const originalSignature = proof.signedClaim.signatures[0]
 
-    const recoveredAddress = verifyMessage(
-      serializedMessage,
-      originalSignature
-    );
+    const recoveredAddress = verifyMessage(serializedMessage, originalSignature)
 
     // console.log("  Recovered address:", recoveredAddress);
     // console.log("  Expected witness: ", proof.expectedWitness);
 
     expect(recoveredAddress.toLowerCase()).to.equal(
-      proof.expectedWitness.toLowerCase()
-    );
+      proof.expectedWitness.toLowerCase(),
+    )
     // console.log("✅ Recovered address matches expected witness!");
-  });
+  })
 
-  it("uses correct Ethereum Signed Message format", () => {
-    console.log("\n📋 Ethereum Signed Message format:");
-    const prefix = "\x19Ethereum Signed Message:\n";
-    const fullMessage = prefix + serializedMessage.length + serializedMessage;
+  it('uses correct Ethereum Signed Message format', () => {
+    console.log('\n📋 Ethereum Signed Message format:')
+    const prefix = '\x19Ethereum Signed Message:\n'
+    const fullMessage = prefix + serializedMessage.length + serializedMessage
 
     // console.log("  Prefix:", JSON.stringify(prefix));
     // console.log("  Length:", serializedMessage.length);
     // console.log("  Full message (what gets hashed):");
     // console.log("  ", JSON.stringify(fullMessage));
 
-    expect(fullMessage).to.include(prefix);
-    expect(fullMessage).to.include(serializedMessage);
-  });
-});
+    expect(fullMessage).to.include(prefix)
+    expect(fullMessage).to.include(serializedMessage)
+  })
+})
