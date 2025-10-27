@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("J3tkLEXB6vvj9wKDbsKFcUiCma82Hw5iV2qTjvNGsofh");
+declare_id!("BvHdh8mMnXq9EnhrVD6Q1i1eR4SavuHnxZFXCCoCAuoZ");
 
 #[program]
 pub mod nullifier_registry {

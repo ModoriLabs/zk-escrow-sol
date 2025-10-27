@@ -2,24 +2,25 @@
 anchor_version = "0.31.1"
 
 [features]
-seeds = false
+resolution = true
 skip-lint = false
 
 [programs.localnet]
-nullifier_registry = "J3tkLEXB6vvj9wKDbsKFcUiCma82Hw5iV2qTjvNGsofh"
+counter = "6jxW7jprC4R3nCuk2bdW1fjYfcno84W3UCvC11a6icLX"
+nullifier_registry = "BvHdh8mMnXq9EnhrVD6Q1i1eR4SavuHnxZFXCCoCAuoZ"
 spl_nft = "9fH1v7Pa2nUAgd3xbszA1bpSeH8NRL8iQVWuWUuWot3p"
-zk_escrow_sol = "944j5oBiD7kTvS2j2hYow4oq5MFLbPXaGF7ZHUG2Fpbu"
+zk_escrow_sol = "3EgB44qFrL2gZhi24oiw6kqV6YTdg1i8hdG9nNxHLUzK"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "localnet"
 wallet = "./deployer.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.test.ts\""
 init-collection = "ts-node scripts/init-collection.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.test.ts\""
 
 [test]
 startup_wait = 5000
