@@ -14,7 +14,7 @@ use errors::*;
 use spl_nft::CollectionState;
 use utils::*;
 
-declare_id!("944j5oBiD7kTvS2j2hYow4oq5MFLbPXaGF7ZHUG2Fpbu");
+declare_id!("3EgB44qFrL2gZhi24oiw6kqV6YTdg1i8hdG9nNxHLUzK");
 
 #[program]
 pub mod zk_escrow_sol {
