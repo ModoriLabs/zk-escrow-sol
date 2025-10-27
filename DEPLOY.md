@@ -1,11 +1,13 @@
 # ZK Escrow Deployment Guide
 
 This guide explains how to deploy and use the ZK Escrow system consisting of two programs:
+
 1. **zk-escrow-sol**: ZK proof verification program
 
 ## Architecture
 
 The system works as follows:
+
 1. Admin deposits SPL tokens into the escrow vault
 2. Users send cash/fiat to admin (off-chain)
 3. Users receive a ZK proof of their payment
@@ -26,27 +28,32 @@ anchor build
 ```
 
 This generates:
+
 - `target/deploy/zk_escrow_sol.so`
 - `target/idl/zk_escrow_sol.json`
 
 ## Deploy to Localnet
 
 1. Start local validator:
+
 ```bash
 solana-test-validator
 ```
 
 2. Deploy programs:
+
 ```bash
 anchor deploy
 ```
 
 3. Initialize programs:
+
 ```bash
 yarn deploy:localnet
 ```
 
 This will:
+
 - Initialize the verification program
 - Initialize the escrow with threshold=1 and your wallet as admin
 - Display program IDs and configuration
@@ -54,16 +61,19 @@ This will:
 ## Deploy to Devnet
 
 1. Set Solana cluster to devnet:
+
 ```bash
 solana config set --url devnet
 ```
 
 2. Airdrop SOL (if needed):
+
 ```bash
 solana airdrop 2
 ```
 
 3. Deploy and initialize:
+
 ```bash
 yarn deploy:devnet
 ```
@@ -81,6 +91,7 @@ After deployment, note these addresses:
 ### 1. Initialize Escrow
 
 Done automatically by deploy script. Parameters:
+
 - `required_threshold`: Number of witness signatures required (default: 1)
 - `admin`: Admin public key (can withdraw anytime)
 
@@ -97,7 +108,7 @@ await escrowProgram.methods
     escrowVault: escrowVault,
     tokenProgram: TOKEN_PROGRAM_ID,
   })
-  .rpc();
+  .rpc()
 ```
 
 ### 3. Withdraw with Proof
@@ -108,8 +119,8 @@ Users must provide valid ZK proof:
 await escrowProgram.methods
   .withdraw(
     new anchor.BN(amount),
-    proof,              // ZK proof structure
-    expectedWitnesses   // Array of witness addresses
+    proof, // ZK proof structure
+    expectedWitnesses, // Array of witness addresses
   )
   .accounts({
     escrow: escrowPda,
@@ -119,10 +130,11 @@ await escrowProgram.methods
     tokenProgram: TOKEN_PROGRAM_ID,
     verificationProgram: verificationProgramId,
   })
-  .rpc();
+  .rpc()
 ```
 
 The proof structure:
+
 ```typescript
 {
   claimInfo: {
@@ -156,17 +168,19 @@ await escrowProgram.methods
     escrowVault: escrowVault,
     tokenProgram: TOKEN_PROGRAM_ID,
   })
-  .rpc();
+  .rpc()
 ```
 
 ## Testing
 
 Run tests:
+
 ```bash
 anchor test
 ```
 
 Or run specific test:
+
 ```bash
 anchor test tests/escrow.test.ts
 ```
@@ -181,13 +195,17 @@ anchor test tests/escrow.test.ts
 ## Troubleshooting
 
 ### Program Already Deployed
+
 If you see "already in use" errors, the programs are already deployed. The deploy script handles this gracefully.
 
 ### IDL Generation Errors
+
 These are test-only errors and don't affect the deployed programs. The release binaries (.so files) compile successfully.
 
 ### Token Account Issues
+
 Ensure:
+
 - Escrow vault is owned by the Escrow PDA (use `allowOwnerOffCurve: true`)
 - User token accounts exist before deposit/withdraw
 - Sufficient token balance for operations
@@ -212,6 +230,7 @@ zk-escrow-sol/
 ## Support
 
 For issues or questions:
+
 - Check the test files for usage examples
 - Review Anchor documentation
 - Check Solana Program Library docs for SPL token operations
