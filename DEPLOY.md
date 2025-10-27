@@ -22,7 +22,7 @@ The system works as follows:
 ## Build Programs
 
 ```bash
-anchor build --arch sbf
+anchor build
 ```
 
 This generates:
@@ -163,12 +163,12 @@ await escrowProgram.methods
 
 Run tests:
 ```bash
-anchor test --arch sbf
+anchor test
 ```
 
 Or run specific test:
 ```bash
-anchor test --arch sbf tests/escrow.test.ts
+anchor test tests/escrow.test.ts
 ```
 
 ## Security Considerations

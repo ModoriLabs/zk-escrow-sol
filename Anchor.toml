@@ -7,6 +7,7 @@ skip-lint = false
 
 [programs.localnet]
 nullifier_registry = "J3tkLEXB6vvj9wKDbsKFcUiCma82Hw5iV2qTjvNGsofh"
+spl_nft = "9fH1v7Pa2nUAgd3xbszA1bpSeH8NRL8iQVWuWUuWot3p"
 zk_escrow_sol = "944j5oBiD7kTvS2j2hYow4oq5MFLbPXaGF7ZHUG2Fpbu"
 
 [registry]
