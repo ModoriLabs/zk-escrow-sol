@@ -25,7 +25,7 @@ describe('verify_proof_signatures (original proof.json)', () => {
 
       await program.methods
         .initialize(recipientBankAccount, allowedAmount, fiatCurrency)
-        .accounts({
+        .accountsStrict({
           paymentConfig: paymentConfigPda,
           authority: payer.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -73,9 +73,8 @@ describe('verify_proof_signatures (original proof.json)', () => {
     // Call verify_proof_only
     const tx = await program.methods
       .verifyProofOnly(proof, expectedWitnesses, requiredThreshold)
-      .accounts({
+      .accountsStrict({
         signer: payer.publicKey,
-        paymentConfig: paymentConfigPda,
       })
       .rpc()
 
@@ -124,7 +123,7 @@ describe('verify_proof_signatures (original proof.json)', () => {
     // Call verify_proof_signatures
     const tx = await program.methods
       .verifyProofSignatures(proof, expectedWitnesses, requiredThreshold)
-      .accounts({
+      .accountsStrict({
         signer: payer.publicKey,
         paymentConfig: paymentConfigPda,
       })
@@ -162,7 +161,7 @@ describe('verify_proof_signatures (original proof.json)', () => {
     try {
       await program.methods
         .verifyProofSignatures(proof, wrongWitnesses, requiredThreshold)
-        .accounts({
+        .accountsStrict({
           signer: payer.publicKey,
           paymentConfig: paymentConfigPda,
         })
@@ -202,7 +201,7 @@ describe('verify_proof_signatures (original proof.json)', () => {
     try {
       await program.methods
         .verifyProofSignatures(proof, expectedWitnesses, requiredThreshold)
-        .accounts({
+        .accountsStrict({
           signer: payer.publicKey,
           paymentConfig: paymentConfigPda,
         })

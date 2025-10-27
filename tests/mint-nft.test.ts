@@ -89,7 +89,7 @@ describe('mint-nft', () => {
         'https://kcona.io/metadata', // uri prefix
         new anchor.BN(1000), // price (1000 KRW)
       )
-      .accounts({
+      .accountsStrict({
         user: wallet.publicKey,
         mint: collectionMint,
         collectionState,
@@ -123,7 +123,7 @@ describe('mint-nft', () => {
 
     const tx = await program.methods
       .mintNft()
-      .accounts({
+      .accountsStrict({
         owner: wallet.publicKey,
         destination,
         metadata,
@@ -215,7 +215,7 @@ describe('mint-nft', () => {
 
     const tx = await program.methods
       .verifyCollection()
-      .accounts({
+      .accountsStrict({
         authority: wallet.publicKey,
         metadata: mintMetadata,
         mint,
