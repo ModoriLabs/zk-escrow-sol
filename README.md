@@ -1,5 +1,5 @@
 ### Run test
-`anchor test --arch sbf
+`anchor test`
 
 
 ### Deploy
