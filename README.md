@@ -25,6 +25,15 @@ anchor build
 solana airdrop 100 ./deployer.json
 anchor deploy
 ```
+### deploy collection
+```
+anchor run init-collection
+```
+
+### localnet
+```
+anchor localnet # use this instead of 'solana-test-validator'
+```
 
 ### Upload Image to Irys/Arweave
 
