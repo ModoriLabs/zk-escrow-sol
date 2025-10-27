@@ -489,7 +489,7 @@ pub struct VerifyProofAndMint<'info> {
     #[account(mut)]
     pub mint: Signer<'info>,
 
-    /// User's token account
+    /// CHECK: User's token account for receiving minted NFT
     #[account(mut)]
     pub destination: AccountInfo<'info>,
 
@@ -635,7 +635,7 @@ pub struct MintWithVerifiedProof<'info> {
     #[account(mut)]
     pub mint: Signer<'info>,
 
-    /// User's token account
+    /// CHECK: User's token account for receiving minted NFT
     #[account(mut)]
     pub destination: AccountInfo<'info>,
 

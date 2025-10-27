@@ -15,7 +15,7 @@ The system works as follows:
 ## Prerequisites
 
 - Solana CLI tools installed
-- Anchor CLI installed (v0.29.0)
+- Anchor CLI installed (v0.31.1)
 - Node.js and yarn
 - A funded Solana wallet
 
