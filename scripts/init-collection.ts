@@ -136,15 +136,8 @@ async function main() {
     .accounts({
       user: deployer.publicKey,
       mint: collectionMint,
-      collectionState: collectionState,
-      mintAuthority: mintAuthority,
       metadata: collectionMetadata,
       masterEdition: collectionMasterEdition,
-      destination: collectionDestination,
-      systemProgram: SystemProgram.programId,
-      tokenProgram: TOKEN_PROGRAM_ID,
-      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-      tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
     })
     .signers([collectionKeypair])
     .rpc()
