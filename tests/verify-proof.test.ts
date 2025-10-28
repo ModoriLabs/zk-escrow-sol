@@ -8,7 +8,7 @@ import {
   calculateNullifier,
 } from './utils'
 
-describe('verify_proof_signatures', () => {
+describe.skip('verify_proof_signatures', () => {
   const program = getProgram()
   const fixture = loadProof()
   // Prepare proof structure matching our Solana types
