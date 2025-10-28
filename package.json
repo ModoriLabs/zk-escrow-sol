@@ -8,7 +8,7 @@
         "deploy:localnet": "ts-node scripts/deploy.ts",
         "deploy:devnet": "anchor deploy --provider.cluster devnet && ts-node scripts/deploy.ts",
         "upload-to-irys": "ts-node scripts/upload-to-irys.ts",
-        "init-collection": "ts-node scripts/init-collection.ts"
+        "mint-collection": "ts-node scripts/mint-collection.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.31.1",
