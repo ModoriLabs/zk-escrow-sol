@@ -51,3 +51,10 @@ npm run upload-to-irys 2  # uploads assets/2.png
 ```
 
 This will return an Arweave URI that can be used for NFT metadata or token logos.
+
+### scripts
+```
+anchor run mint-collection
+anchor run mint-nft -- 3AW5mwSFBevBMF4ZyN7tv9atPPWBbtmrvxmyuf31Nv6C
+anchor run show-metadata -- H2TTzWDkfRHCCP2fS5vCZnKJc9P4eaWmqeZVwUz4nB2C
+```
