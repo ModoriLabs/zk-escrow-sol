@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::keccak::hash as keccak256;
 pub use anchor_lang::solana_program::sysvar::instructions::ID as INSTRUCTIONS_ID;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -11,6 +12,7 @@ mod errors;
 mod utils;
 
 use errors::*;
+use nullifier_registry;
 use spl_nft::CollectionState;
 use utils::*;
 
@@ -61,71 +63,77 @@ pub mod zk_escrow_sol {
         verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)
     }
 
-    /// Verify ZK proof and mint NFT
-    /// 1. Verify proof signatures
-    /// 2. Mint NFT via CPI to spl-nft
-    /// Note: Payment validation happens off-chain before calling this function
-    pub fn verify_proof_and_mint(
-        ctx: Context<VerifyProofAndMint>,
-        proof: Proof,
-        expected_witnesses: Vec<String>,
-        required_threshold: u8,
-    ) -> Result<()> {
-        // 1. ZK Proof verification
-        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
-
-        // 2. Log collection info (payment validation happens off-chain)
-        let collection_state = &ctx.accounts.collection_state;
-        msg!("Proof verified! Minting NFT...");
-        msg!("Collection: {}", collection_state.name);
-        msg!("Price: {} KRW", collection_state.price);
-        msg!("Counter: {}", collection_state.counter);
-
-        // 3. NFT Mint via CPI
-        let cpi_program = ctx.accounts.spl_nft_program.to_account_info();
-        let cpi_accounts = spl_nft::cpi::accounts::MintNFT {
-            owner: ctx.accounts.signer.to_account_info(),
-            mint: ctx.accounts.mint.to_account_info(),
-            destination: ctx.accounts.destination.to_account_info(),
-            metadata: ctx.accounts.metadata.to_account_info(),
-            master_edition: ctx.accounts.master_edition.to_account_info(),
-            mint_authority: ctx.accounts.mint_authority.to_account_info(),
-            collection_mint: ctx.accounts.collection_mint.to_account_info(),
-            collection_state: ctx.accounts.collection_state.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
-            token_program: ctx.accounts.token_program.to_account_info(),
-            associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
-            token_metadata_program: ctx.accounts.token_metadata_program.to_account_info(),
-        };
-
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        spl_nft::cpi::mint_nft(cpi_ctx)?;
-
-        msg!("NFT minted successfully!");
-        msg!(
-            "URI: {}/{}",
-            collection_state.uri_prefix,
-            collection_state.counter
-        );
-
-        Ok(())
-    }
-
     /// Two-Transaction Pattern: Step 1 - Verify proof and store result in PDA
     /// This separates large proof verification from NFT minting to solve transaction size issues
     /// Each unique claim_identifier gets its own PDA, allowing multiple verifications per user
     pub fn verify_proof(
-        ctx: Context<VerifyProofNew>,
+        ctx: Context<VerifyProof>,
         proof: Proof,
         expected_witnesses: Vec<String>,
         required_threshold: u8,
     ) -> Result<()> {
         msg!("=== Step 1: Verify Proof ===");
 
-        // 1. Verify proof using internal logic
+        // 0. Calculate nullifier hash from identifier: keccak256(identifier)
+        let identifier_bytes = proof.signed_claim.claim.identifier.as_bytes();
+        let hash = keccak256(identifier_bytes);
+        let nullifier_hash = hash.0; // Use raw bytes (32 bytes) instead of hex string
+        msg!("Calculated nullifier hash: {:?}", nullifier_hash);
+
+        // Derive expected nullifier record PDA
+        let (expected_nullifier_pda, _bump) = Pubkey::find_program_address(
+            &[b"nullifier", &nullifier_hash],
+            &ctx.accounts.nullifier_registry_program.key(),
+        );
+
+        // Verify that the provided nullifier_record matches the expected PDA
+        require!(
+            ctx.accounts.nullifier_record.key() == expected_nullifier_pda,
+            Secp256k1Error::InvalidHex // Or create a better error
+        );
+        msg!("Nullifier record PDA verified: {}", expected_nullifier_pda);
+
+        // Check if nullifier has been used (replay attack prevention)
+        msg!("Checking if nullifier has been used...");
+        nullifier_registry::cpi::check_nullifier(
+            CpiContext::new(
+                ctx.accounts.nullifier_registry_program.to_account_info(),
+                nullifier_registry::cpi::accounts::CheckNullifier {
+                    nullifier_record: ctx.accounts.nullifier_record.to_account_info(),
+                },
+            ),
+            nullifier_hash,
+        )?;
+        msg!("Nullifier check passed - not used before");
+
+        // 1. Verify payment details from stored config
+        let config = &ctx.accounts.payment_config;
+        verify_payment_details_from_context(
+            &proof.claim_info.context,
+            &config.recipient_bank_account,
+            config.allowed_amount,
+            &config.fiat_currency,
+        )?;
+
+        // 2. Verify proof signatures using internal logic
         verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
 
-        // 2. Store verification result in PDA
+        // 3. Mark nullifier as used (after all validations pass)
+        msg!("Marking nullifier as used: {:?}", nullifier_hash);
+        nullifier_registry::cpi::mark_nullifier(
+            CpiContext::new(
+                ctx.accounts.nullifier_registry_program.to_account_info(),
+                nullifier_registry::cpi::accounts::MarkNullifier {
+                    registry: ctx.accounts.nullifier_registry.to_account_info(),
+                    nullifier_record: ctx.accounts.nullifier_record.to_account_info(),
+                    user: ctx.accounts.signer.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                },
+            ),
+            nullifier_hash,
+        )?;
+
+        // 4. Store verification result in PDA
         let result = &mut ctx.accounts.verification_result;
         result.user = ctx.accounts.signer.key();
         result.verified_at = Clock::get()?.unix_timestamp;
@@ -188,7 +196,7 @@ pub mod zk_escrow_sol {
             collection_state.counter
         );
 
-        // 5. Verify collection (mark NFT as verified)
+        // 4. Verify collection (mark NFT as verified)
         msg!("=== Step 3: Verify Collection ===");
 
         let verify_cpi_program = ctx.accounts.spl_nft_program.to_account_info();
@@ -229,10 +237,10 @@ fn verify_proof_internal_logic(
     msg!("Expected witnesses: {:?}", expected_witnesses);
 
     // 1. Verify required_threshold is valid
-    require!(required_threshold > 0, Secp256k1Error::InvalidSignature);
+    require!(required_threshold > 0, Secp256k1Error::InvalidThreshold);
     require!(
         (required_threshold as usize) <= expected_witnesses.len(),
-        Secp256k1Error::InvalidSignature
+        Secp256k1Error::InvalidThreshold
     );
     require!(
         proof.signed_claim.signatures.len() > 0,
@@ -521,7 +529,8 @@ pub struct VerificationResult {
 
 /// Account structure for verify_proof instruction
 #[derive(Accounts)]
-pub struct VerifyProofNew<'info> {
+#[instruction(proof: Proof)]
+pub struct VerifyProof<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
@@ -533,6 +542,30 @@ pub struct VerifyProofNew<'info> {
         bump,
     )]
     pub verification_result: Account<'info, VerificationResult>,
+
+    #[account(
+        seeds = [b"payment_config", signer.key().as_ref()],
+        bump,
+    )]
+    pub payment_config: Account<'info, PaymentConfig>,
+
+    // ========== Nullifier Registry Accounts ==========
+    #[account(
+        mut,
+        seeds = [b"nullifier_registry"],
+        bump,
+        seeds::program = nullifier_registry_program.key(),
+    )]
+    /// CHECK: Nullifier registry PDA from nullifier_registry program
+    pub nullifier_registry: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: Nullifier record PDA (will be initialized by mark_nullifier)
+    /// Seeds: [b"nullifier", &nullifier_hash] where nullifier_hash = keccak256(claim_identifier) raw bytes
+    /// This PDA is derived and verified inside verify_proof function
+    pub nullifier_record: UncheckedAccount<'info>,
+
+    pub nullifier_registry_program: Program<'info, nullifier_registry::program::NullifierRegistry>,
 
     pub system_program: Program<'info, System>,
 }

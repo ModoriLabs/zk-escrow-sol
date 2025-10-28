@@ -15,8 +15,10 @@ import {
 import {
   getProgram,
   getSplNftProgram,
+  getNullifierProgram,
   loadProof,
   serializeSignature,
+  calculateNullifier,
 } from './utils'
 // Note: We'll parse metadata manually instead of using deserializeMetadata
 // to avoid UMI compatibility issues
@@ -33,6 +35,8 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
   )
 
   let paymentConfigPda: anchor.web3.PublicKey
+  let nullifierRegistryPda: anchor.web3.PublicKey
+  let nullifierRecordPda: anchor.web3.PublicKey
   let mintAuthority: anchor.web3.PublicKey
   let collectionKeypair: Keypair
   let collectionMint: anchor.web3.PublicKey
@@ -94,6 +98,30 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       zkEscrowSolProgram.programId,
     )
     console.log('Payment Config PDA:', paymentConfigPda.toBase58())
+
+    // Find nullifier registry PDA
+    ;[nullifierRegistryPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('nullifier_registry')],
+      getNullifierProgram().programId,
+    )
+    console.log('Nullifier Registry PDA:', nullifierRegistryPda.toBase58())
+
+    // Initialize nullifier registry if not exists
+    try {
+      await getNullifierProgram()
+        .methods.initialize()
+        .accounts({
+          authority: payer.publicKey,
+        })
+        .rpc()
+      console.log('✅ Nullifier registry initialized')
+    } catch (e: any) {
+      if (e.message && e.message.includes('already in use')) {
+        console.log('✅ Nullifier registry already initialized')
+      } else {
+        throw e
+      }
+    }
 
     // Generate collection mint keypair
     collectionKeypair = Keypair.generate()
@@ -196,16 +224,19 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
 
     const fixture = loadProof()
 
+    // Use unique context for this test to avoid nullifier collision
+    const testContext = JSON.parse(fixture.claimInfo.context)
+
     // Prepare proof structure
     const proof = {
       claimInfo: {
         provider: fixture.claimInfo.provider,
         parameters: fixture.claimInfo.parameters,
-        context: fixture.claimInfo.context,
+        context: JSON.stringify(testContext),
       },
       signedClaim: {
         claim: {
-          identifier: fixture.signedClaim.claim.identifier,
+          identifier: fixture.signedClaim.claim.identifier, // Use original identifier (signatures are valid for this)
           owner: fixture.signedClaim.claim.owner,
           timestampS: fixture.signedClaim.claim.timestampS,
           epoch: fixture.signedClaim.claim.epoch,
@@ -225,17 +256,42 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       zkEscrowSolProgram.programId,
     )
 
-    // Transaction 1: Verify proof and store result in PDA
-    const tx = await zkEscrowSolProgram.methods
-      .verifyProof(proof, expectedWitnesses, requiredThreshold)
-      .accounts({
-        signer: payer.publicKey,
-      })
-      .rpc({
-        skipPreflight: true,
-      })
+    // Calculate nullifier hash from context (32-char hex string)
+    const nullifierHash = calculateNullifier(proof.signedClaim.claim.identifier)
 
-    console.log('✅ Proof verified, tx:', tx)
+    // Find nullifier record PDA using nullifier hash bytes
+    const [nullifierRecordPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('nullifier'), nullifierHash],
+      getNullifierProgram().programId,
+    )
+    console.log('Nullifier Record PDA:', nullifierRecordPda.toBase58())
+
+    // Transaction 1: Verify proof and store result in PDA
+    try {
+      const tx = await zkEscrowSolProgram.methods
+        .verifyProof(proof, expectedWitnesses, requiredThreshold)
+        .accounts({
+          signer: payer.publicKey,
+          paymentConfig: paymentConfigPda,
+          nullifierRegistry: nullifierRegistryPda,
+          nullifierRecord: nullifierRecordPda,
+        })
+        .rpc({
+          skipPreflight: true,
+        })
+
+      console.log('✅ Proof verified, tx:', tx)
+    } catch (error: any) {
+      console.error('❌ Proof verification failed!')
+      console.error('Error:', error)
+      console.error('Error message:', error.message)
+      console.error('Error logs:', error.logs)
+      if (error.error) {
+        console.error('Error code:', error.error.errorCode)
+        console.error('Error name:', error.error.errorMessage)
+      }
+      throw error
+    }
 
     // Verify verification result PDA was created
     const verificationResult =
@@ -248,7 +304,7 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     )
     expect(verificationResult.isUsed).to.be.false
     expect(verificationResult.claimIdentifier).to.equal(
-      fixture.signedClaim.claim.identifier,
+      fixture.signedClaim.claim.identifier, // Original identifier used in the proof
     )
 
     console.log('Verification Result:')

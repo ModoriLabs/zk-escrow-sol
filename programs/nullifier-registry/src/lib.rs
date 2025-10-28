@@ -19,21 +19,16 @@ pub mod nullifier_registry {
 
     /// Mark a nullifier as used
     /// This prevents replay attacks by ensuring each proof can only be used once
-    pub fn mark_nullifier(ctx: Context<MarkNullifier>, nullifier_hash: String) -> Result<()> {
-        require!(
-            !nullifier_hash.is_empty(),
-            NullifierError::InvalidNullifier
-        );
-
+    pub fn mark_nullifier(ctx: Context<MarkNullifier>, nullifier_hash: [u8; 32]) -> Result<()> {
         let nullifier_record = &mut ctx.accounts.nullifier_record;
-        nullifier_record.nullifier_hash = nullifier_hash.clone();
+        nullifier_record.nullifier_hash = nullifier_hash;
         nullifier_record.used_at = Clock::get()?.unix_timestamp;
         nullifier_record.used_by = ctx.accounts.user.key();
 
         let registry = &mut ctx.accounts.registry;
         registry.nullifier_count += 1;
 
-        msg!("Nullifier marked as used: {}", nullifier_hash);
+        msg!("Nullifier marked as used: {:?}", nullifier_hash);
         msg!("Used by: {}", ctx.accounts.user.key());
         msg!("Total nullifiers: {}", registry.nullifier_count);
 
@@ -41,18 +36,20 @@ pub mod nullifier_registry {
     }
 
     /// Check if a nullifier has been used (read-only)
-    /// This is called via CPI from other programs
-    pub fn check_nullifier(ctx: Context<CheckNullifier>, nullifier_hash: String) -> Result<()> {
-        // If the nullifier_record account exists and is initialized, the nullifier has been used
-        let nullifier_record = &ctx.accounts.nullifier_record;
+    /// This is called via CPI from other programs to prevent replay attacks
+    /// Returns error if nullifier is already used
+    pub fn check_nullifier(ctx: Context<CheckNullifier>, nullifier_hash: [u8; 32]) -> Result<()> {
+        let nullifier_record_account = &ctx.accounts.nullifier_record;
 
-        require!(
-            nullifier_record.nullifier_hash == nullifier_hash,
-            NullifierError::NullifierHashMismatch
-        );
+        // Check if the account is initialized (has data)
+        if !nullifier_record_account.data_is_empty() {
+            // Account exists - it's been used
+            msg!("Nullifier already used: {:?}", nullifier_hash);
+            return err!(NullifierError::NullifierAlreadyUsed);
+        }
 
-        // If we reach here, the nullifier exists (has been used)
-        return err!(NullifierError::NullifierAlreadyUsed);
+        msg!("Nullifier check passed: {:?} (not used before)", nullifier_hash);
+        Ok(())
     }
 }
 
@@ -78,7 +75,7 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nullifier_hash: String)]
+#[instruction(nullifier_hash: [u8; 32])]
 pub struct MarkNullifier<'info> {
     #[account(
         mut,
@@ -91,7 +88,7 @@ pub struct MarkNullifier<'info> {
         init,
         payer = user,
         space = 8 + NullifierRecord::INIT_SPACE,
-        seeds = [b"nullifier", nullifier_hash.as_bytes()],
+        seeds = [b"nullifier", nullifier_hash.as_ref()],
         bump,
     )]
     pub nullifier_record: Account<'info, NullifierRecord>,
@@ -103,13 +100,14 @@ pub struct MarkNullifier<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nullifier_hash: String)]
+#[instruction(nullifier_hash: [u8; 32])]
 pub struct CheckNullifier<'info> {
+    /// CHECK: This account may or may not exist. We manually check if it's initialized.
     #[account(
-        seeds = [b"nullifier", nullifier_hash.as_bytes()],
+        seeds = [b"nullifier", nullifier_hash.as_ref()],
         bump,
     )]
-    pub nullifier_record: Account<'info, NullifierRecord>,
+    pub nullifier_record: AccountInfo<'info>,
 }
 
 // ============================================================================
@@ -123,13 +121,11 @@ pub struct NullifierRegistry {
     pub authority: Pubkey,
     pub nullifier_count: u64,
 }
-
 /// Individual nullifier record
 #[account]
 #[derive(InitSpace)]
 pub struct NullifierRecord {
-    #[max_len(32)] // Max 32 bytes for PDA seed compatibility
-    pub nullifier_hash: String,
+    pub nullifier_hash: [u8; 32], // Raw keccak256 hash bytes
     pub used_at: i64,
     pub used_by: Pubkey,
 }
