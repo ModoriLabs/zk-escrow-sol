@@ -51,39 +51,6 @@ pub mod zk_escrow_sol {
         Ok(())
     }
 
-    ///
-    /// This function verifies a complete proof structure including:
-    /// 1. Claim identifier matches hash of claim info
-    /// 2. Signatures are valid and recover to expected witnesses
-    /// 3. At least `required_threshold` valid witness signatures exist
-    /// 4. Payment details validation against stored config
-    ///
-    /// # Arguments
-    /// * `proof` - Complete proof containing claim_info and signed_claim
-    /// * `expected_witnesses` - List of valid witness addresses
-    /// * `required_threshold` - Minimum number of valid signatures required
-    pub fn verify_proof_signatures(
-        ctx: Context<VerifyProofSignatures>,
-        proof: Proof,
-        expected_witnesses: Vec<String>,
-        required_threshold: u8,
-    ) -> Result<()> {
-        // Verify payment details from stored config
-        let config = &ctx.accounts.payment_config;
-        verify_payment_details_from_context(
-            &proof.claim_info.context,
-            &config.recipient_bank_account,
-            config.allowed_amount,
-            &config.fiat_currency,
-        )?;
-
-        // Verify proof signatures
-        verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
-
-        Ok(())
-    }
-
-    /// Verify proof without payment validation (for unit testing)
     /// This exposes the internal proof verification logic
     pub fn verify_proof_only(
         _ctx: Context<VerifyProofInternal>,
@@ -188,23 +155,13 @@ pub mod zk_escrow_sol {
             Secp256k1Error::UnauthorizedUser
         );
 
-        // 2. Check verification is not expired (5 minutes = 300 seconds)
-        // let elapsed = current_time - result.verified_at;
-        // require!(
-        //     elapsed < 300,
-        //     Secp256k1Error::VerificationExpired
-        // );
-
-        // msg!("Verification checks passed");
-        // msg!("Elapsed time: {} seconds", elapsed);
-
-        // 3. Get collection info for logging
+        // 2. Get collection info for logging
         let collection_state = &ctx.accounts.collection_state;
         msg!("Collection: {}", collection_state.name);
         msg!("Price: {} KRW", collection_state.price);
         msg!("Counter: {}", collection_state.counter);
 
-        // 4. Mint NFT via CPI
+        // 3. Mint NFT via CPI
         let cpi_program = ctx.accounts.spl_nft_program.to_account_info();
         let cpi_accounts = spl_nft::cpi::accounts::MintNFT {
             owner: ctx.accounts.signer.to_account_info(),
@@ -371,20 +328,11 @@ fn verify_proof_internal_logic(
         }
     }
 
-    msg!(
-        "Valid witness signatures: {}/{}",
-        valid_witness_count,
-        required_threshold
-    );
-
     // 5. Check if we have enough valid witness signatures
     require!(
         valid_witness_count >= required_threshold,
         Secp256k1Error::AddressMismatch
     );
-
-    msg!("Proof verification successful!");
-
     Ok(())
 }
 
@@ -431,21 +379,6 @@ fn verify_payment_details_from_context(
     Ok(())
 }
 
-/// Verify payment amount from proof context (simplified version)
-fn verify_payment_amount(context: &str, required_amount: u64) -> Result<()> {
-    let formatted_amount = format!("-{}", required_amount);
-    require!(
-        context.contains(&formatted_amount),
-        Secp256k1Error::AmountMismatch
-    );
-    msg!("✓ Payment amount verified: {} KRW", required_amount);
-    Ok(())
-}
-
-// ============================================================================
-// Account Structures
-// ============================================================================
-
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(
@@ -461,17 +394,6 @@ pub struct Initialize<'info> {
     pub authority: Signer<'info>,
 
     pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct VerifyProofSignatures<'info> {
-    pub signer: Signer<'info>,
-
-    #[account(
-        seeds = [b"payment_config", signer.key().as_ref()],
-        bump,
-    )]
-    pub payment_config: Account<'info, PaymentConfig>,
 }
 
 #[derive(Accounts)]
