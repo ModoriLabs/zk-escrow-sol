@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum Secp256k1Error {
+    #[msg("Invalid threshold")]
+    InvalidThreshold,
+
     #[msg("Invalid signature format")]
     InvalidSignature,
 
@@ -43,4 +46,7 @@ pub enum Secp256k1Error {
 
     #[msg("Verification has expired (older than 5 minutes)")]
     VerificationExpired,
+
+    #[msg("Nullifier has already been used (replay attack prevented)")]
+    NullifierAlreadyUsed,
 }

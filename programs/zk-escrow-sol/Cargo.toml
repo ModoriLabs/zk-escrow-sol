@@ -21,3 +21,4 @@ anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
 hex = "0.4.3"
 spl-nft = { path = "../spl-nft", features = ["cpi"] }
+nullifier-registry = { path = "../nullifier-registry", features = ["cpi"] }
