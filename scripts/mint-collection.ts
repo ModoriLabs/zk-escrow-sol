@@ -50,7 +50,7 @@ const getMasterEdition = (mint: PublicKey): PublicKey => {
 }
 
 async function main() {
-  console.log('\n🚀 Initializing Collection on Localnet...\n')
+  console.log('\n🚀 Minting Collection on Localnet...\n')
 
   // Setup
   const provider = anchor.AnchorProvider.env()
@@ -172,7 +172,7 @@ async function main() {
     timestamp: new Date().toISOString(),
   }
 
-  console.log('\n✨ Collection initialization complete!')
+  console.log('\n✨ Collection minted!')
   console.log('\n📋 Summary:')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('Collection Mint:     ', collectionInfo.collectionMint)
