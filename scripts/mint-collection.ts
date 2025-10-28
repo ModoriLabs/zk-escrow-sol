@@ -112,8 +112,8 @@ async function main() {
   console.log('💼 Collection Destination:', collectionDestination.toBase58())
 
   // Collection parameters
-  const COLLECTION_NAME = 'KCONA KPOP STAR '
-  const COLLECTION_SYMBOL = 'KSTAR'
+  const COLLECTION_NAME = 'KCONA KPOP STAR'
+  const COLLECTION_SYMBOL = 'KSART'
   const COLLECTION_URI = 'https://kcona.io/star/metadata'
   const NFT_PRICE = 1000 // KRW
 

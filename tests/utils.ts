@@ -180,26 +180,11 @@ export function getTokenEscrowProgram(): Program<any> {
 }
 
 /**
- * Calculate deterministic nullifier hash from proof context
- * Must match on-chain calculation: keccak256(senderNickname + transactionDate)
+ * Calculate deterministic nullifier hash from identifier
+ * Returns raw keccak256 hash bytes (32 bytes) as Buffer
  */
-export function calculateNullifier(context: string): string {
-  const parsed = JSON.parse(context)
-  const params = parsed.extractedParameters
-
-  if (!params.senderNickname) {
-    throw new Error('Missing senderNickname in context')
-  }
-  if (!params.transactionDate) {
-    throw new Error('Missing transactionDate in context')
-  }
-
-  // Create nullifier data (same as on-chain)
-  const nullifierData = `${params.senderNickname}${params.transactionDate}`
-
-  // Hash using keccak256
-  const hash = keccak256(toUtf8Bytes(nullifierData))
-
-  // Take first 16 bytes (32 hex chars) to stay within 32 byte limit
-  return hash.slice(2, 34) // Remove "0x" and take 32 chars
+export function calculateNullifier(identifier: string): Buffer {
+  const hashHex = keccak256(toUtf8Bytes(identifier))
+  // Convert hex string (with 0x prefix) to Buffer
+  return Buffer.from(hashHex.slice(2), 'hex')
 }
