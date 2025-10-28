@@ -19,7 +19,9 @@ cluster = "localnet"
 wallet = "./deployer.json"
 
 [scripts]
-init-collection = "ts-node scripts/init-collection.ts"
+mint-collection = "ts-node scripts/mint-collection.ts"
+mint-nft = "ts-node scripts/mint-nft.ts"
+show-metadata = "ts-node scripts/show-metadata.ts"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.test.ts\""
 
 [test]
