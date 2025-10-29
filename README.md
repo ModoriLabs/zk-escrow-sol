@@ -27,7 +27,8 @@ anchor deploy
 ```
 ### deploy collection
 ```
-anchor run init-collection
+anchor run initialize
+anchor run mint-collection
 ```
 
 ### localnet

@@ -12,6 +12,7 @@ import * as anchor from '@coral-xyz/anchor'
 import { Program } from '@coral-xyz/anchor'
 import { ZkEscrowSol } from '../target/types/zk_escrow_sol'
 import { SplNft } from '../target/types/spl_nft'
+import { NullifierRegistry } from '../target/types/nullifier_registry'
 
 export interface ClaimInfo {
   provider: string
@@ -151,11 +152,11 @@ export function getProgram(): Program<ZkEscrowSol> {
 /**
  * Get NullifierRegistry Program instance
  */
-export function getNullifierProgram(): Program<any> {
+export function getNullifierProgram(): Program<NullifierRegistry> {
   const provider = anchor.AnchorProvider.env()
   anchor.setProvider(provider)
 
-  return anchor.workspace.NullifierRegistry as Program<any>
+  return anchor.workspace.NullifierRegistry as Program<NullifierRegistry>
 }
 
 /**

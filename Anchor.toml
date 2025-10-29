@@ -19,6 +19,7 @@ cluster = "localnet"
 wallet = "./deployer.json"
 
 [scripts]
+initialize = "ts-node scripts/initialize.ts"
 mint-collection = "ts-node scripts/mint-collection.ts"
 mint-nft = "ts-node scripts/mint-nft.ts"
 show-metadata = "ts-node scripts/show-metadata.ts"
