@@ -7,6 +7,7 @@
         "deploy": "ts-node scripts/deploy.ts",
         "deploy:localnet": "ts-node scripts/deploy.ts",
         "deploy:devnet": "anchor deploy --provider.cluster devnet && ts-node scripts/deploy.ts",
+        "initialize": "ts-node scripts/initialize.ts",
         "upload-to-irys": "ts-node scripts/upload-to-irys.ts",
         "upload-to-s3": "ts-node scripts/upload-to-s3.ts",
         "mint-collection": "ts-node scripts/mint-collection.ts",
