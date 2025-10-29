@@ -14,10 +14,12 @@ pub mod spl_nft {
         ctx: Context<CreateCollection>,
         name: String,
         symbol: String,
-        uri: String,
+        collection_uri: String,
+        uri_prefix: String,
         price: u64,
     ) -> Result<()> {
-        ctx.accounts.create_collection(&ctx.bumps, name, symbol, uri, price)
+        ctx.accounts
+            .create_collection(&ctx.bumps, name, symbol, collection_uri, uri_prefix, price)
     }
 
     pub fn mint_nft(ctx: Context<MintNFT>) -> Result<()> {

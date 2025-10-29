@@ -1,29 +1,16 @@
 use anchor_lang::prelude::*;
+use anchor_spl::metadata::mpl_token_metadata::{
+    instructions::{
+        CreateMasterEditionV3Cpi, CreateMasterEditionV3CpiAccounts,
+        CreateMasterEditionV3InstructionArgs, CreateMetadataAccountV3Cpi,
+        CreateMetadataAccountV3CpiAccounts, CreateMetadataAccountV3InstructionArgs,
+    },
+    types::{Collection, Creator, DataV2},
+};
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::Metadata,
-    token::{
-        mint_to,
-        Mint,
-        MintTo,
-        Token,
-        TokenAccount
-    }
-};
-use anchor_spl::metadata::mpl_token_metadata::{
-    instructions::{
-        CreateMasterEditionV3Cpi,
-        CreateMasterEditionV3CpiAccounts,
-        CreateMasterEditionV3InstructionArgs,
-        CreateMetadataAccountV3Cpi,
-        CreateMetadataAccountV3CpiAccounts,
-        CreateMetadataAccountV3InstructionArgs,
-    },
-    types::{
-        Collection,
-        Creator,
-        DataV2,
-    }
+    token::{mint_to, Mint, MintTo, Token, TokenAccount},
 };
 
 #[derive(Accounts)]
@@ -73,7 +60,6 @@ pub struct MintNFT<'info> {
 
 impl<'info> MintNFT<'info> {
     pub fn mint_nft(&mut self, bumps: &MintNFTBumps) -> Result<()> {
-
         let metadata = &self.metadata.to_account_info();
         let master_edition = &self.master_edition.to_account_info();
         let mint = &self.mint.to_account_info();
@@ -83,10 +69,7 @@ impl<'info> MintNFT<'info> {
         let spl_token_program = &self.token_program.to_account_info();
         let spl_metadata_program = &self.token_metadata_program.to_account_info();
 
-        let seeds = &[
-            &b"authority"[..],
-            &[bumps.mint_authority]
-        ];
+        let seeds = &[&b"authority"[..], &[bumps.mint_authority]];
         let signer_seeds = &[&seeds[..]];
 
         let cpi_program = self.token_program.to_account_info();
@@ -99,18 +82,19 @@ impl<'info> MintNFT<'info> {
         mint_to(cpi_ctx, 1)?;
         msg!("Collection NFT minted!");
 
-        let creator = vec![
-            Creator {
-                address: self.mint_authority.key(),
-                verified: true,
-                share: 100,
-            },
-        ];
+        let creator = vec![Creator {
+            address: self.mint_authority.key(),
+            verified: true,
+            share: 100,
+        }];
 
         // Increment counter and build URI
         self.collection_state.counter += 1;
         let token_id = self.collection_state.counter;
-        let uri = format!("{}/{}", self.collection_state.uri_prefix, token_id);
+
+        // Remove trailing slash from uri_prefix if present to avoid double slashes
+        let uri_prefix = self.collection_state.uri_prefix.trim_end_matches('/');
+        let uri = format!("{}/{}.json", uri_prefix, token_id);
 
         let metadata_account = CreateMetadataAccountV3Cpi::new(
             spl_metadata_program,
@@ -134,11 +118,11 @@ impl<'info> MintNFT<'info> {
                         verified: false,
                         key: self.collection_mint.key(),
                     }),
-                    uses: None
+                    uses: None,
                 },
                 is_mutable: true,
                 collection_details: None,
-            }
+            },
         );
         metadata_account.invoke_signed(signer_seeds)?;
 
@@ -157,11 +141,10 @@ impl<'info> MintNFT<'info> {
             },
             CreateMasterEditionV3InstructionArgs {
                 max_supply: Some(0),
-            }
+            },
         );
         master_edition_account.invoke_signed(signer_seeds)?;
 
         Ok(())
-
     }
 }
