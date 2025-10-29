@@ -272,8 +272,6 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
         .verifyProof(proof, expectedWitnesses, requiredThreshold)
         .accounts({
           signer: payer.publicKey,
-          paymentConfig: paymentConfigPda,
-          nullifierRegistry: nullifierRegistryPda,
           nullifierRecord: nullifierRecordPda,
         })
         .rpc({
