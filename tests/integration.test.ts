@@ -35,8 +35,6 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
   )
 
   let paymentConfigPda: anchor.web3.PublicKey
-  let nullifierRegistryPda: anchor.web3.PublicKey
-  let nullifierRecordPda: anchor.web3.PublicKey
   let mintAuthority: anchor.web3.PublicKey
   let collectionKeypair: Keypair
   let collectionMint: anchor.web3.PublicKey
@@ -98,30 +96,6 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       zkEscrowSolProgram.programId,
     )
     console.log('Payment Config PDA:', paymentConfigPda.toBase58())
-
-    // Find nullifier registry PDA
-    ;[nullifierRegistryPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('nullifier_registry')],
-      getNullifierProgram().programId,
-    )
-    console.log('Nullifier Registry PDA:', nullifierRegistryPda.toBase58())
-
-    // Initialize nullifier registry if not exists
-    try {
-      await getNullifierProgram()
-        .methods.initialize()
-        .accounts({
-          authority: payer.publicKey,
-        })
-        .rpc()
-      console.log('✅ Nullifier registry initialized')
-    } catch (e: any) {
-      if (e.message && e.message.includes('already in use')) {
-        console.log('✅ Nullifier registry already initialized')
-      } else {
-        throw e
-      }
-    }
 
     // Generate collection mint keypair
     collectionKeypair = Keypair.generate()
@@ -256,23 +230,12 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       zkEscrowSolProgram.programId,
     )
 
-    // Calculate nullifier hash from context (32-char hex string)
-    const nullifierHash = calculateNullifier(proof.signedClaim.claim.identifier)
-
-    // Find nullifier record PDA using nullifier hash bytes
-    const [nullifierRecordPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('nullifier'), nullifierHash],
-      getNullifierProgram().programId,
-    )
-    console.log('Nullifier Record PDA:', nullifierRecordPda.toBase58())
-
     // Transaction 1: Verify proof and store result in PDA
     try {
       const tx = await zkEscrowSolProgram.methods
         .verifyProof(proof, expectedWitnesses, requiredThreshold)
         .accounts({
           signer: payer.publicKey,
-          nullifierRecord: nullifierRecordPda,
         })
         .rpc({
           skipPreflight: true,
