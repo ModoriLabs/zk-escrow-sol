@@ -1,0 +1,16 @@
+{
+  "name": "KCONA KPOP STAR",
+  "symbol": "KCONA",
+  "description": "KCONA KPOP STAR",
+  "seller_fee_basis_points": 0,
+  "image": "https://kcona.s3.ap-northeast-2.amazonaws.com/_collection.png",
+  "collection": {
+    "name": "KCONA KPOP STAR",
+    "family": "KCONA"
+  },
+  "attributes": [],
+  "properties": {
+    "category": "image",
+    "creators": []
+  }
+}

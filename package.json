@@ -8,6 +8,7 @@
         "deploy:localnet": "ts-node scripts/deploy.ts",
         "deploy:devnet": "anchor deploy --provider.cluster devnet && ts-node scripts/deploy.ts",
         "upload-to-irys": "ts-node scripts/upload-to-irys.ts",
+        "upload-to-s3": "ts-node scripts/upload-to-s3.ts",
         "mint-collection": "ts-node scripts/mint-collection.ts",
         "mint-nft": "ts-node scripts/mint-nft.ts"
     },
@@ -24,6 +25,7 @@
         "ethers": "^6.9.0"
     },
     "devDependencies": {
+        "@aws-sdk/client-s3": "^3.919.0",
         "@types/bn.js": "^5.1.0",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^9.0.0",
