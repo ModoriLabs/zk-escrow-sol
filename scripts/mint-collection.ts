@@ -1,11 +1,14 @@
 import * as anchor from '@coral-xyz/anchor'
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js'
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddressSync,
-} from '@solana/spl-token'
+import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { getSplNftProgram } from '../tests/utils'
+import {
+  COLLECTION_NAME,
+  COLLECTION_SYMBOL,
+  COLLECTION_URI,
+  COLLECTION_URI_PREFIX,
+  NFT_PRICE,
+} from '../constants'
 
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
@@ -111,12 +114,6 @@ async function main() {
   )
   console.log('💼 Collection Destination:', collectionDestination.toBase58())
 
-  // Collection parameters
-  const COLLECTION_NAME = 'KCONA KPOP STAR'
-  const COLLECTION_SYMBOL = 'KSART'
-  const COLLECTION_URI = 'https://kcona.io/star/metadata'
-  const NFT_PRICE = 1000 // KRW
-
   console.log('\n⚙️  Collection Parameters:')
   console.log('  Name:', COLLECTION_NAME)
   console.log('  Symbol:', COLLECTION_SYMBOL)
@@ -131,6 +128,7 @@ async function main() {
       COLLECTION_NAME,
       COLLECTION_SYMBOL,
       COLLECTION_URI,
+      COLLECTION_URI_PREFIX,
       new anchor.BN(NFT_PRICE),
     )
     .accounts({

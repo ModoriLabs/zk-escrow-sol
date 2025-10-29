@@ -131,7 +131,8 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       .createCollection(
         'KCONA_MOVIE1', // name
         'KMOVIE1', // symbol
-        'https://kcona.io/movie/metadata', // uri prefix
+        'https://kcona.io/movie/_collection.json', // collection uri
+        'https://kcona.io/movie/json', // uri prefix
         new anchor.BN(1000), // price (1000 KRW)
       )
       .accounts({
@@ -438,8 +439,11 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     expect(collectionStateAccount.counter.toNumber()).to.equal(1)
     expect(collectionStateAccount.name).to.equal('KCONA_MOVIE1')
     expect(collectionStateAccount.symbol).to.equal('KMOVIE1')
+    expect(collectionStateAccount.collectionUri).to.equal(
+      'https://kcona.io/movie/_collection.json',
+    )
     expect(collectionStateAccount.uriPrefix).to.equal(
-      'https://kcona.io/movie/metadata',
+      'https://kcona.io/movie/json',
     )
     expect(collectionStateAccount.price.toNumber()).to.equal(1000)
 
@@ -509,8 +513,9 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
 
     // Verify second NFT has URI with counter 2
     const metadata2AccountInfo = await connection.getAccountInfo(metadata2)
-    const expectedUri2 = 'https://kcona.io/movie/metadata/2'
+    const expectedUri2 = 'https://kcona.io/movie/json/2.json'
     const metadata2String = metadata2AccountInfo!.data.toString()
+    console.log('metadata2String', metadata2String)
     expect(metadata2String.includes(expectedUri2)).to.be.true
     console.log(`✅ Second NFT minted with URI: ${expectedUri2}`)
   })

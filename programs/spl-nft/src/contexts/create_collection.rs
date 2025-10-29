@@ -1,29 +1,16 @@
 use anchor_lang::prelude::*;
+use anchor_spl::metadata::mpl_token_metadata::{
+    instructions::{
+        CreateMasterEditionV3Cpi, CreateMasterEditionV3CpiAccounts,
+        CreateMasterEditionV3InstructionArgs, CreateMetadataAccountV3Cpi,
+        CreateMetadataAccountV3CpiAccounts, CreateMetadataAccountV3InstructionArgs,
+    },
+    types::{CollectionDetails, Creator, DataV2},
+};
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::Metadata,
-    token::{
-        mint_to,
-        Mint,
-        MintTo,
-        Token,
-        TokenAccount,
-    }
-};
-use anchor_spl::metadata::mpl_token_metadata::{
-    instructions::{
-        CreateMasterEditionV3Cpi,
-        CreateMasterEditionV3CpiAccounts,
-        CreateMasterEditionV3InstructionArgs,
-        CreateMetadataAccountV3Cpi,
-        CreateMetadataAccountV3CpiAccounts,
-        CreateMetadataAccountV3InstructionArgs
-    },
-    types::{
-        CollectionDetails,
-        Creator,
-        DataV2
-    }
+    token::{mint_to, Mint, MintTo, Token, TokenAccount},
 };
 
 #[account]
@@ -32,6 +19,7 @@ pub struct CollectionState {
     pub name: String,
     pub symbol: String,
     pub uri_prefix: String,
+    pub collection_uri: String,
     pub counter: u64,
     pub price: u64,
 }
@@ -87,10 +75,10 @@ impl<'info> CreateCollection<'info> {
         bumps: &CreateCollectionBumps,
         name: String,
         symbol: String,
-        uri: String,
+        collection_uri: String,
+        uri_prefix: String,
         price: u64,
     ) -> Result<()> {
-
         let metadata = &self.metadata.to_account_info();
         let master_edition = &self.master_edition.to_account_info();
         let mint = &self.mint.to_account_info();
@@ -100,10 +88,7 @@ impl<'info> CreateCollection<'info> {
         let spl_token_program = &self.token_program.to_account_info();
         let spl_metadata_program = &self.token_metadata_program.to_account_info();
 
-        let seeds = &[
-            &b"authority"[..],
-            &[bumps.mint_authority]
-        ];
+        let seeds = &[&b"authority"[..], &[bumps.mint_authority]];
         let signer_seeds = &[&seeds[..]];
 
         let cpi_program = self.token_program.to_account_info();
@@ -116,13 +101,11 @@ impl<'info> CreateCollection<'info> {
         mint_to(cpi_ctx, 1)?;
         msg!("Collection NFT minted!");
 
-        let creator = vec![
-            Creator {
-                address: self.mint_authority.key().clone(),
-                verified: true,
-                share: 100,
-            },
-        ];
+        let creator = vec![Creator {
+            address: self.mint_authority.key().clone(),
+            verified: true,
+            share: 100,
+        }];
 
         let metadata_account = CreateMetadataAccountV3Cpi::new(
             spl_metadata_program,
@@ -139,19 +122,15 @@ impl<'info> CreateCollection<'info> {
                 data: DataV2 {
                     name: name.clone(),
                     symbol: symbol.clone(),
-                    uri: uri.clone(),
+                    uri: collection_uri.clone(),
                     seller_fee_basis_points: 0,
                     creators: Some(creator),
                     collection: None,
                     uses: None,
                 },
                 is_mutable: true,
-                collection_details: Some(
-                    CollectionDetails::V1 {
-                        size: 0
-                    }
-                )
-            }
+                collection_details: Some(CollectionDetails::V1 { size: 0 }),
+            },
         );
         metadata_account.invoke_signed(signer_seeds)?;
         msg!("Metadata Account created!");
@@ -171,7 +150,7 @@ impl<'info> CreateCollection<'info> {
             },
             CreateMasterEditionV3InstructionArgs {
                 max_supply: Some(0),
-            }
+            },
         );
         master_edition_account.invoke_signed(signer_seeds)?;
         msg!("Master Edition Account created");
@@ -180,7 +159,8 @@ impl<'info> CreateCollection<'info> {
         self.collection_state.collection_mint = self.mint.key();
         self.collection_state.name = name;
         self.collection_state.symbol = symbol;
-        self.collection_state.uri_prefix = uri;
+        self.collection_state.collection_uri = collection_uri;
+        self.collection_state.uri_prefix = uri_prefix;
         self.collection_state.counter = 0;
         self.collection_state.price = price;
 
