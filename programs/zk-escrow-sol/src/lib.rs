@@ -14,6 +14,10 @@ use errors::*;
 use spl_nft::CollectionState;
 use utils::*;
 
+#[cfg(feature = "devnet")]
+declare_id!("J36AoiYodAamYMT8w29JX4XD9J9B3CSoYGiFnBdJsXYx");
+
+#[cfg(not(feature = "devnet"))]
 declare_id!("3EgB44qFrL2gZhi24oiw6kqV6YTdg1i8hdG9nNxHLUzK");
 
 #[program]
