@@ -1,0 +1,32 @@
+{
+  "name": "KCONA KPOP STAR #1",
+  "description": "KCONA KPOP STAR #1",
+  "symbol": "KCONA",
+  "image": "https://kcona.s3.ap-northeast-2.amazonaws.com/images/1.png",
+  "seller_fee_basis_points": 0,
+  "attributes": [
+    {
+      "trait_type": "Gender",
+      "value": "Male"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Black"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "id": "portrait",
+        "uri": "https://kcona.s3.ap-northeast-2.amazonaws.com/images/1.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image",
+    "collection": {
+      "name": "KCONA KPOP STAR",
+      "family": "KCONA"
+    },
+    "creators": []
+  }
+}
