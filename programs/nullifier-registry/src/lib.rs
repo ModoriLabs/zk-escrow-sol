@@ -1,5 +1,9 @@
 use anchor_lang::prelude::*;
 
+#[cfg(feature = "devnet")]
+declare_id!("5djS2Qd4ob9vWUA5qJc9iPeWnjrJ2CDQctGpyzjFhsRz");
+
+#[cfg(not(feature = "devnet"))]
 declare_id!("BvHdh8mMnXq9EnhrVD6Q1i1eR4SavuHnxZFXCCoCAuoZ");
 
 #[program]

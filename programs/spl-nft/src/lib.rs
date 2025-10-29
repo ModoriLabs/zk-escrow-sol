@@ -1,5 +1,9 @@
 use anchor_lang::prelude::*;
 
+#[cfg(feature = "devnet")]
+declare_id!("2BrzdsjAbsuvHFcJZswEq6YBNBzuzy2AEXpMR6FLrwck");
+
+#[cfg(not(feature = "devnet"))]
 declare_id!("9fH1v7Pa2nUAgd3xbszA1bpSeH8NRL8iQVWuWUuWot3p");
 
 pub mod contexts;
