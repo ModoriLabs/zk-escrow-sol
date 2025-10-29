@@ -11,6 +11,11 @@ nullifier_registry = "BvHdh8mMnXq9EnhrVD6Q1i1eR4SavuHnxZFXCCoCAuoZ"
 spl_nft = "9fH1v7Pa2nUAgd3xbszA1bpSeH8NRL8iQVWuWUuWot3p"
 zk_escrow_sol = "3EgB44qFrL2gZhi24oiw6kqV6YTdg1i8hdG9nNxHLUzK"
 
+[programs.devnet]
+nullifier_registry = "5djS2Qd4ob9vWUA5qJc9iPeWnjrJ2CDQctGpyzjFhsRz"
+spl_nft = "2BrzdsjAbsuvHFcJZswEq6YBNBzuzy2AEXpMR6FLrwck"
+zk_escrow_sol = "J36AoiYodAamYMT8w29JX4XD9J9B3CSoYGiFnBdJsXYx"
+
 [registry]
 url = "https://api.apr.dev"
 
