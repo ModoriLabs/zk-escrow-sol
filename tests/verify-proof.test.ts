@@ -33,7 +33,7 @@ describe('verify_proof_signatures', () => {
   before(async () => {
     // Find payment config PDA
     ;[paymentConfigPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('payment_config'), payer.publicKey.toBuffer()],
+      [Buffer.from('payment_config')],
       program.programId,
     )
 

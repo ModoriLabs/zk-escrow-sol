@@ -33,7 +33,7 @@ async function initializeZkEscrowSol() {
 
   // Derive payment config PDA
   const [paymentConfig, bump] = PublicKey.findProgramAddressSync(
-    [Buffer.from('payment_config'), deployer.publicKey.toBuffer()],
+    [Buffer.from('payment_config')],
     zkProgram.programId,
   )
 
