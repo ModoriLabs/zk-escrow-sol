@@ -6,7 +6,7 @@ export const FIAT_CURRENCY = 'KRW'
 
 // Collection parameters
 export const COLLECTION_NAME = 'KCONA KPOP STAR'
-export const COLLECTION_SYMBOL = 'KSART'
+export const COLLECTION_SYMBOL = 'KCONA'
 export const COLLECTION_URI =
   'https://kcona.s3.ap-northeast-2.amazonaws.com/_collection'
 export const COLLECTION_URI_PREFIX =
