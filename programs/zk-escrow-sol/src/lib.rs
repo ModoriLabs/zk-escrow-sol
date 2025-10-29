@@ -370,7 +370,7 @@ pub struct Initialize<'info> {
         init,
         payer = authority,
         space = 8 + PaymentConfig::INIT_SPACE,
-        seeds = [b"payment_config", authority.key().as_ref()],
+        seeds = [b"payment_config"],
         bump,
     )]
     pub payment_config: Account<'info, PaymentConfig>,
@@ -521,7 +521,7 @@ pub struct VerifyProof<'info> {
     pub verification_result: Account<'info, VerificationResult>,
 
     #[account(
-        seeds = [b"payment_config", signer.key().as_ref()],
+        seeds = [b"payment_config"],
         bump,
     )]
     pub payment_config: Account<'info, PaymentConfig>,

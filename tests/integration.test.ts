@@ -92,7 +92,7 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
 
     // Find payment config PDA
     ;[paymentConfigPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('payment_config'), payer.publicKey.toBuffer()],
+      [Buffer.from('payment_config')],
       zkEscrowSolProgram.programId,
     )
     console.log('Payment Config PDA:', paymentConfigPda.toBase58())
