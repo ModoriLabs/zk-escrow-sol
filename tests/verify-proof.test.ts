@@ -171,8 +171,6 @@ describe.skip('verify_proof_signatures', () => {
         .verifyProof(proof, expectedWitnesses, requiredThreshold)
         .accounts({
           signer: payer.publicKey,
-          paymentConfig: paymentConfigPda,
-          nullifierRegistry: nullifierRegistryPda,
           nullifierRecord: nullifierRecordPda,
         })
         .rpc()
@@ -231,8 +229,6 @@ describe.skip('verify_proof_signatures', () => {
         .verifyProof(proof, expectedWitnesses, requiredThreshold)
         .accounts({
           signer: payer.publicKey,
-          paymentConfig: paymentConfigPda,
-          nullifierRegistry: nullifierRegistryPda,
           nullifierRecord: nullifierRecordPda,
         })
         .rpc()
