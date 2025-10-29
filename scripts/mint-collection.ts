@@ -81,6 +81,59 @@ async function main() {
 
   console.log('\n📦 SPL-NFT Program:', splNftProgram.programId.toBase58())
 
+  // Check for existing collections first
+  console.log('\n🔍 Checking for existing collections...')
+  try {
+    const existingCollections = await splNftProgram.account.collectionState.all()
+
+    if (existingCollections.length > 0) {
+      console.log(`\n✅ Found ${existingCollections.length} existing collection(s):\n`)
+
+      const [mintAuthority] = PublicKey.findProgramAddressSync(
+        [Buffer.from('authority')],
+        splNftProgram.programId,
+      )
+
+      for (const collectionState of existingCollections) {
+        const state: any = collectionState.account
+        const collectionMint = state.collectionMint
+
+        // Derive metadata and master edition PDAs
+        const collectionMetadata = getMetadata(collectionMint)
+        const collectionMasterEdition = getMasterEdition(collectionMint)
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        console.log('📊 Collection State PDA:', collectionState.publicKey.toBase58())
+        console.log('🎨 Collection Mint:', collectionMint.toBase58())
+        console.log('📛 Name:', state.name)
+        console.log('🏷️  Symbol:', state.symbol)
+        console.log('🔗 Collection URI:', state.collectionUri)
+        console.log('📝 URI Prefix:', state.uriPrefix)
+        console.log('💰 Price:', state.price.toString(), 'KRW')
+        console.log('🔢 NFTs Minted:', state.counter.toString())
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
+
+        console.log('📌 Copy these addresses to your frontend:')
+        console.log(`
+const COLLECTION_ADDRESSES = {
+  mint: "${collectionMint.toBase58()}",
+  state: "${collectionState.publicKey.toBase58()}",
+  metadata: "${collectionMetadata.toBase58()}",
+  masterEdition: "${collectionMasterEdition.toBase58()}",
+  mintAuthority: "${mintAuthority.toBase58()}"
+};
+        `)
+      }
+
+      console.log('🔑 Mint Authority PDA:', mintAuthority.toBase58())
+      return
+    }
+
+    console.log('No existing collections found. Creating new collection...\n')
+  } catch (error) {
+    console.log('Could not fetch existing collections. Proceeding with creation...\n')
+  }
+
   // Find mint authority PDA
   const [mintAuthority] = PublicKey.findProgramAddressSync(
     [Buffer.from('authority')],
