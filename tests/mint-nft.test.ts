@@ -86,7 +86,8 @@ describe('mint-nft', () => {
       .createCollection(
         'KCONA', // name
         'KCONA', // symbol
-        'https://kcona.io/metadata', // uri prefix
+        'https://kcona.io/metadata/_collection.json', // collection uri
+        'https://kcona.io/metadata/json', // uri prefix
         new anchor.BN(1000), // price (1000 KRW)
       )
       .accountsStrict({
@@ -173,8 +174,8 @@ describe('mint-nft', () => {
     )
     assert.strictEqual(
       collectionStateAccount.uriPrefix,
-      'https://kcona.io/metadata',
-      'URI prefix should be https://kcona.io/metadata',
+      'https://kcona.io/metadata/json',
+      'URI prefix should be https://kcona.io/metadata/json',
     )
     assert.strictEqual(
       collectionStateAccount.price.toNumber(),
@@ -190,7 +191,7 @@ describe('mint-nft', () => {
 
     // Decode the metadata to check URI (basic check - metadata exists and has data)
     const metadataData = metadataAccountInfo.data
-    const uriExpected = 'https://kcona.io/metadata/1'
+    const uriExpected = 'https://kcona.io/metadata/json/1.json'
 
     // The URI is stored in the metadata account - we can verify it's there
     const metadataString = metadataData.toString()

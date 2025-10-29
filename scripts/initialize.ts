@@ -1,10 +1,11 @@
 import * as anchor from '@coral-xyz/anchor'
 import { PublicKey } from '@solana/web3.js'
 import { getProgram } from '../tests/utils'
-
-const RECIPIENT_BANK_ACCOUNT = '100202642943(토스뱅크)'
-const ALLOWED_AMOUNT = new anchor.BN(1000) // 1000 KRW (matches proof.json: "-1000")
-const FIAT_CURRENCY = 'KRW'
+import {
+  RECIPIENT_BANK_ACCOUNT,
+  ALLOWED_AMOUNT,
+  FIAT_CURRENCY,
+} from '../constants'
 
 /**
  * Initialize zk_escrow_sol program after deployment
