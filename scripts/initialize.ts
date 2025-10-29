@@ -1,85 +1,20 @@
 import * as anchor from '@coral-xyz/anchor'
 import { PublicKey } from '@solana/web3.js'
-import {
-  getProgram,
-  getNullifierProgram,
-  getSplNftProgram,
-} from '../tests/utils'
+import { getProgram } from '../tests/utils'
 
 const RECIPIENT_BANK_ACCOUNT = '100202642943(토스뱅크)'
 const ALLOWED_AMOUNT = new anchor.BN(1000) // 1000 KRW (matches proof.json: "-1000")
 const FIAT_CURRENCY = 'KRW'
 
 /**
- * Initialize all programs after deployment
+ * Initialize zk_escrow_sol program after deployment
  *
- * This script performs the following initialization steps:
- * 1. Initialize nullifier_registry program
- * 2. Initialize zk_escrow_sol program with payment config
- * 3. Create NFT collection (optional - can be done separately)
+ * This script performs the following initialization:
+ * - Initialize zk_escrow_sol program with payment config
  */
 
-async function initializeNullifierRegistry() {
-  console.log('\n📋 Step 1: Initialize Nullifier Registry')
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-  const provider = anchor.AnchorProvider.env()
-  anchor.setProvider(provider)
-
-  const nullifierProgram = getNullifierProgram()
-  const deployer = provider.wallet as anchor.Wallet
-
-  console.log('👤 Authority:', deployer.publicKey.toBase58())
-  console.log('📦 Program ID:', nullifierProgram.programId.toBase58())
-
-  // Derive nullifier registry PDA
-  const [nullifierRegistry, bump] = PublicKey.findProgramAddressSync(
-    [Buffer.from('nullifier_registry')],
-    nullifierProgram.programId,
-  )
-
-  console.log('📊 Registry PDA:', nullifierRegistry.toBase58())
-  console.log('🔢 Bump:', bump)
-
-  // Check if already initialized
-  try {
-    const registryAccount =
-      await nullifierProgram.account.nullifierRegistry.fetch(nullifierRegistry)
-    console.log('\n⚠️  Registry already initialized!')
-    console.log('   Authority:', registryAccount.authority.toBase58())
-    console.log(
-      '   Nullifier Count:',
-      registryAccount.nullifierCount.toString(),
-    )
-    return nullifierRegistry
-  } catch (error) {
-    // Not initialized, proceed with initialization
-    console.log('\n📝 Initializing registry...')
-  }
-
-  // Initialize nullifier registry
-  const tx = await nullifierProgram.methods
-    .initialize()
-    .accounts({
-      authority: deployer.publicKey,
-    })
-    .rpc()
-
-  console.log('\n✅ Nullifier Registry initialized!')
-  console.log('📋 Transaction:', tx)
-
-  // Verify
-  const registryAccount =
-    await nullifierProgram.account.nullifierRegistry.fetch(nullifierRegistry)
-  console.log('\n🔍 Verification:')
-  console.log('   Authority:', registryAccount.authority.toBase58())
-  console.log('   Nullifier Count:', registryAccount.nullifierCount.toString())
-
-  return nullifierRegistry
-}
-
 async function initializeZkEscrowSol() {
-  console.log('\n📋 Step 2: Initialize ZK Escrow Program')
+  console.log('\n📋 Initialize ZK Escrow Program')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
   const provider = anchor.AnchorProvider.env()
@@ -175,16 +110,12 @@ async function main() {
   }
 
   try {
-    // Step 1: Initialize nullifier registry
-    const nullifierRegistry = await initializeNullifierRegistry()
-
-    // Step 2: Initialize zk-escrow-sol
+    // Initialize zk-escrow-sol
     const paymentConfig = await initializeZkEscrowSol()
 
     // Summary
     console.log('\n\n✨ Initialization Complete!')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📊 Nullifier Registry:', nullifierRegistry.toBase58())
     console.log('⚙️  Payment Config:', paymentConfig.toBase58())
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 

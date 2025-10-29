@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::keccak::hash as keccak256;
 pub use anchor_lang::solana_program::sysvar::instructions::ID as INSTRUCTIONS_ID;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -12,7 +11,6 @@ mod errors;
 mod utils;
 
 use errors::*;
-use nullifier_registry;
 use spl_nft::CollectionState;
 use utils::*;
 
@@ -74,38 +72,6 @@ pub mod zk_escrow_sol {
     ) -> Result<()> {
         msg!("=== Step 1: Verify Proof ===");
 
-        // 0. Calculate nullifier hash from identifier: keccak256(identifier)
-        let identifier_bytes = proof.signed_claim.claim.identifier.as_bytes();
-        let hash = keccak256(identifier_bytes);
-        let nullifier_hash = hash.0; // Use raw bytes (32 bytes) instead of hex string
-        msg!("Calculated nullifier hash: {:?}", nullifier_hash);
-
-        // Derive expected nullifier record PDA
-        let (expected_nullifier_pda, _bump) = Pubkey::find_program_address(
-            &[b"nullifier", &nullifier_hash],
-            &ctx.accounts.nullifier_registry_program.key(),
-        );
-
-        // Verify that the provided nullifier_record matches the expected PDA
-        require!(
-            ctx.accounts.nullifier_record.key() == expected_nullifier_pda,
-            Secp256k1Error::InvalidHex // Or create a better error
-        );
-        msg!("Nullifier record PDA verified: {}", expected_nullifier_pda);
-
-        // Check if nullifier has been used (replay attack prevention)
-        msg!("Checking if nullifier has been used...");
-        nullifier_registry::cpi::check_nullifier(
-            CpiContext::new(
-                ctx.accounts.nullifier_registry_program.to_account_info(),
-                nullifier_registry::cpi::accounts::CheckNullifier {
-                    nullifier_record: ctx.accounts.nullifier_record.to_account_info(),
-                },
-            ),
-            nullifier_hash,
-        )?;
-        msg!("Nullifier check passed - not used before");
-
         // 1. Verify payment details from stored config
         let config = &ctx.accounts.payment_config;
         verify_payment_details_from_context(
@@ -118,22 +84,7 @@ pub mod zk_escrow_sol {
         // 2. Verify proof signatures using internal logic
         verify_proof_internal_logic(&proof, &expected_witnesses, required_threshold)?;
 
-        // 3. Mark nullifier as used (after all validations pass)
-        msg!("Marking nullifier as used: {:?}", nullifier_hash);
-        nullifier_registry::cpi::mark_nullifier(
-            CpiContext::new(
-                ctx.accounts.nullifier_registry_program.to_account_info(),
-                nullifier_registry::cpi::accounts::MarkNullifier {
-                    registry: ctx.accounts.nullifier_registry.to_account_info(),
-                    nullifier_record: ctx.accounts.nullifier_record.to_account_info(),
-                    user: ctx.accounts.signer.to_account_info(),
-                    system_program: ctx.accounts.system_program.to_account_info(),
-                },
-            ),
-            nullifier_hash,
-        )?;
-
-        // 4. Store verification result in PDA
+        // 3. Store verification result in PDA
         let result = &mut ctx.accounts.verification_result;
         result.user = ctx.accounts.signer.key();
         result.verified_at = Clock::get()?.unix_timestamp;
@@ -548,24 +499,6 @@ pub struct VerifyProof<'info> {
         bump,
     )]
     pub payment_config: Account<'info, PaymentConfig>,
-
-    // ========== Nullifier Registry Accounts ==========
-    #[account(
-        mut,
-        seeds = [b"nullifier_registry"],
-        bump,
-        seeds::program = nullifier_registry_program.key(),
-    )]
-    /// CHECK: Nullifier registry PDA from nullifier_registry program
-    pub nullifier_registry: UncheckedAccount<'info>,
-
-    #[account(mut)]
-    /// CHECK: Nullifier record PDA (will be initialized by mark_nullifier)
-    /// Seeds: [b"nullifier", &nullifier_hash] where nullifier_hash = keccak256(claim_identifier) raw bytes
-    /// This PDA is derived and verified inside verify_proof function
-    pub nullifier_record: UncheckedAccount<'info>,
-
-    pub nullifier_registry_program: Program<'info, nullifier_registry::program::NullifierRegistry>,
 
     pub system_program: Program<'info, System>,
 }

@@ -1,14 +1,8 @@
 import { expect } from 'chai'
 import * as anchor from '@coral-xyz/anchor'
-import {
-  loadProof,
-  getProgram,
-  serializeSignature,
-  getNullifierProgram,
-  calculateNullifier,
-} from './utils'
+import { loadProof, getProgram, serializeSignature } from './utils'
 
-describe.skip('verify_proof_signatures', () => {
+describe('verify_proof_signatures', () => {
   const program = getProgram()
   const fixture = loadProof()
   // Prepare proof structure matching our Solana types
@@ -35,7 +29,6 @@ describe.skip('verify_proof_signatures', () => {
   const payer = provider.wallet as anchor.Wallet
 
   let paymentConfigPda: anchor.web3.PublicKey
-  let nullifierRegistryPda: anchor.web3.PublicKey
 
   before(async () => {
     // Find payment config PDA
@@ -43,29 +36,6 @@ describe.skip('verify_proof_signatures', () => {
       [Buffer.from('payment_config'), payer.publicKey.toBuffer()],
       program.programId,
     )
-
-    // Find nullifier registry PDA
-    ;[nullifierRegistryPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('nullifier_registry')],
-      getNullifierProgram().programId,
-    )
-
-    // Initialize nullifier registry if not exists
-    try {
-      await getNullifierProgram()
-        .methods.initialize()
-        .accounts({
-          authority: payer.publicKey,
-        })
-        .rpc()
-      console.log('✅ Nullifier registry initialized')
-    } catch (e: any) {
-      if (e.message && e.message.includes('already in use')) {
-        console.log('✅ Nullifier registry already initialized')
-      } else {
-        throw e
-      }
-    }
 
     // Initialize payment config if not exists
     try {
@@ -117,22 +87,12 @@ describe.skip('verify_proof_signatures', () => {
     }
     const expectedWitnesses = [fixture.expectedWitness]
 
-    // Calculate nullifier hash from identifier (raw 32 bytes)
-    const nullifierHash = calculateNullifier(proof.signedClaim.claim.identifier)
-
-    // Find nullifier record PDA using nullifier hash bytes
-    const [nullifierRecordPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('nullifier'), nullifierHash],
-      getNullifierProgram().programId,
-    )
-
     // Required threshold (at least 1 valid signature)
     const requiredThreshold = 1
     const tx = await program.methods
       .verifyProof(proof, expectedWitnesses, requiredThreshold)
       .accounts({
         signer: payer.publicKey,
-        nullifierRecord: nullifierRecordPda,
       })
       .rpc()
   })
@@ -160,18 +120,11 @@ describe.skip('verify_proof_signatures', () => {
     const expectedWitnesses = [fixture.expectedWitness]
     const requiredThreshold = 1
 
-    const nullifierHash = calculateNullifier(invalidIdentifier)
-    const [nullifierRecordPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('nullifier'), nullifierHash],
-      getNullifierProgram().programId,
-    )
-
     try {
       await program.methods
         .verifyProof(proof, expectedWitnesses, requiredThreshold)
         .accounts({
           signer: payer.publicKey,
-          nullifierRecord: nullifierRecordPda,
         })
         .rpc()
 
@@ -212,15 +165,6 @@ describe.skip('verify_proof_signatures', () => {
     // But proof only has 1 valid signature, so it should fail
     const expectedWitnesses = [fixture.expectedWitness]
 
-    // Calculate nullifier hash from context
-    const nullifierHash = calculateNullifier(proof.signedClaim.claim.identifier)
-
-    // Find nullifier record PDA using nullifier hash bytes
-    const [nullifierRecordPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('nullifier'), nullifierHash],
-      getNullifierProgram().programId,
-    )
-
     // Required threshold (at least 2 valid signatures)
     // But proof only has 1 signature, so threshold won't be met
     const requiredThreshold = 2
@@ -229,7 +173,6 @@ describe.skip('verify_proof_signatures', () => {
         .verifyProof(proof, expectedWitnesses, requiredThreshold)
         .accounts({
           signer: payer.publicKey,
-          nullifierRecord: nullifierRecordPda,
         })
         .rpc()
 
