@@ -24,6 +24,10 @@ anchor build
 ```
 solana airdrop 100 ./deployer.json
 anchor deploy
+
+# For devnet
+# anchor build --features devnet
+# anchor deploy --features devnet
 ```
 ### deploy collection
 ```
