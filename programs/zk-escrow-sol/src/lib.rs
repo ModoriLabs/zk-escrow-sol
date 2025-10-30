@@ -406,50 +406,6 @@ pub struct VerifyProofInternal<'info> {
     pub signer: Signer<'info>,
 }
 
-#[derive(Accounts)]
-pub struct VerifyProofAndMint<'info> {
-    #[account(mut)]
-    pub signer: Signer<'info>,
-
-    // ========== spl-nft CPI Accounts ==========
-    /// New NFT mint
-    #[account(mut)]
-    pub mint: Signer<'info>,
-
-    /// CHECK: Metaplex metadata
-    #[account(mut)]
-    pub metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Metaplex master edition
-    #[account(mut)]
-    pub master_edition: UncheckedAccount<'info>,
-
-    /// CHECK: spl-nft authority PDA
-    pub mint_authority: UncheckedAccount<'info>,
-
-    /// Collection mint
-    #[account(mut)]
-    pub collection_mint: Account<'info, Mint>,
-
-    /// Collection state (price 정보 포함)
-    #[account(
-        mut,
-        seeds = [b"collection_state", collection_mint.key().as_ref()],
-        bump,
-        seeds::program = spl_nft_program.key(),
-    )]
-    pub collection_state: Account<'info, CollectionState>,
-
-    // ========== Programs ==========
-    pub spl_nft_program: Program<'info, spl_nft::program::SplNft>,
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-
-    /// CHECK: Token Metadata Program
-    pub token_metadata_program: UncheckedAccount<'info>,
-}
-
 // ============================================================================
 // Data Structures (zk-escrow compatible)
 // ============================================================================
