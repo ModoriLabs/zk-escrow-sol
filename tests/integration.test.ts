@@ -5,6 +5,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddressSync,
+  getAccount,
 } from '@solana/spl-token'
 import {
   Keypair,
@@ -29,6 +30,12 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
   const provider = anchor.AnchorProvider.env()
   const connection = provider.connection
   const payer = provider.wallet as anchor.Wallet
+
+  // User who will verify the proof and receive the NFT
+  const user = Keypair.generate()
+
+  // Sponsor who will pay for the minting transaction
+  const sponsor = payer
 
   const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
     'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
@@ -82,6 +89,16 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
 
   before(async () => {
     console.log('\n=== Setup: Creating NFT Collection ===')
+
+    // Fund the user account for transaction fees
+    console.log('\nFunding user account...')
+    console.log('User:', user.publicKey.toBase58())
+    const airdropSig = await connection.requestAirdrop(
+      user.publicKey,
+      2 * anchor.web3.LAMPORTS_PER_SOL,
+    )
+    await connection.confirmTransaction(airdropSig)
+    console.log('✅ User funded with 2 SOL')
 
     // Find mint authority PDA
     mintAuthority = anchor.web3.PublicKey.findProgramAddressSync(
@@ -225,19 +242,22 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     const expectedWitnesses = [fixture.expectedWitness]
     const requiredThreshold = 1
 
-    // Find verification result PDA
+    // Find verification result PDA (derived from user, not sponsor)
     ;[verificationResultPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('verification'), payer.publicKey.toBuffer()],
+      [Buffer.from('verification'), user.publicKey.toBuffer()],
       zkEscrowSolProgram.programId,
     )
+    console.log('Verification Result PDA:', verificationResultPda.toBase58())
 
-    // Transaction 1: Verify proof and store result in PDA
+    // Transaction 1: User verifies proof and pays for verification
+    console.log('\n👤 User signs and pays for proof verification')
     try {
       const tx = await zkEscrowSolProgram.methods
         .verifyProof(proof, expectedWitnesses, requiredThreshold)
         .accounts({
-          signer: payer.publicKey,
+          signer: user.publicKey,
         })
+        .signers([user])
         .rpc({
           skipPreflight: true,
         })
@@ -262,7 +282,7 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       )
 
     expect(verificationResult.user.toBase58()).to.equal(
-      payer.publicKey.toBase58(),
+      user.publicKey.toBase58(),
     )
     expect(verificationResult.isUsed).to.be.false
     expect(verificationResult.claimIdentifier).to.equal(
@@ -295,22 +315,26 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     masterEdition = await getMasterEdition(mint)
     console.log('NFT Master Edition:', masterEdition.toBase58())
 
-    // Get NFT destination (ATA)
-    destination = getAssociatedTokenAddressSync(mint, payer.publicKey)
-    console.log('NFT Destination ATA:', destination.toBase58())
+    // Get NFT destination (ATA) - will be auto-derived from verification_result.user
+    destination = getAssociatedTokenAddressSync(mint, user.publicKey)
+    console.log('NFT Destination ATA (user):', destination.toBase58())
 
     // Compute budget instruction (needed for verify_collection CPI)
     const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
       units: 400_000, // Increased limit for mint + verify
     })
 
-    // Mint NFT with verified proof (now includes automatic verification)
+    // Transaction 2: Sponsor pays for minting, but NFT goes to user
+    console.log('\n💰 Sponsor signs and pays for NFT minting')
+    console.log('   → NFT will be sent to user:', user.publicKey.toBase58())
     const tx = await zkEscrowSolProgram.methods
       .mintWithVerifiedProof()
       .accounts({
-        signer: payer.publicKey,
+        signer: sponsor.publicKey,  // Sponsor pays
+        verificationResult: verificationResultPda,  // Contains user pubkey
+        nftRecipient: user.publicKey,  // Verified user who receives NFT
         mint: mint,
-        destination: destination,
+        destination: destination,  // ATA for verified user
         metadata: metadata,
         masterEdition: masterEdition,
         mintAuthority: mintAuthority,
@@ -326,6 +350,8 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       })
 
     console.log('✅ NFT minted, tx:', tx)
+    console.log('   ✅ Sponsor paid for transaction')
+    console.log('   ✅ NFT sent to user')
 
     // Verify verification result PDA still exists (reusable)
     const verificationResult =
@@ -334,7 +360,7 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
       )
 
     expect(verificationResult.user.toBase58()).to.equal(
-      payer.publicKey.toBase58(),
+      user.publicKey.toBase58(),
     )
     console.log('✅ Verification result PDA remains open (reusable)')
     console.log('  - Can be used for future mints with new proofs')
@@ -348,15 +374,14 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
 
     // ========== Client Perspective: Query NFT Information ==========
     // Given: Only user address and mint address (like a real client would have)
-    const user = payer.publicKey
     const nftMint = mint
 
     console.log('📱 Client Query - Given:')
-    console.log('  - User Address:', user.toBase58())
+    console.log('  - User Address:', user.publicKey.toBase58())
     console.log('  - NFT Mint Address:', nftMint.toBase58())
 
     // Step 1: Find user's token account (ATA) for this NFT
-    const userTokenAccount = getAssociatedTokenAddressSync(nftMint, user)
+    const userTokenAccount = getAssociatedTokenAddressSync(nftMint, user.publicKey)
     console.log(
       '\n1️⃣ Derived token account (ATA):',
       userTokenAccount.toBase58(),
@@ -420,7 +445,7 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     // Display NFT Information (like a client UI would show)
     console.log('\n📦 NFT Information (Client View):')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('🔑 Owner:', user.toBase58())
+    console.log('🔑 Owner:', user.publicKey.toBase58())
     console.log('🎨 Mint:', nftMint.toBase58())
     console.log('💼 Token Account:', userTokenAccount.toBase58())
     console.log('📊 Balance:', tokenBalance.value.uiAmount, 'NFT')
@@ -434,6 +459,19 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     console.log('🔗 Metadata URI:', expectedUri)
     console.log('✅ Collection Verified:', isVerified)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+    // Verify destination (user's ATA) owns the NFT with balance = 1
+    const destinationAccount = await getAccount(connection, destination)
+    console.log('\n=== Verify First NFT Ownership ===')
+    console.log('Destination (ATA):', destination.toBase58())
+    console.log('Owner of ATA:', destinationAccount.owner.toBase58())
+    console.log('Mint:', destinationAccount.mint.toBase58())
+    console.log('Balance:', destinationAccount.amount.toString())
+
+    expect(destinationAccount.mint.toBase58()).to.equal(mint.toBase58())
+    expect(destinationAccount.owner.toBase58()).to.equal(user.publicKey.toBase58())
+    expect(destinationAccount.amount.toString()).to.equal('1')
+    console.log('✅ Verified: destination owns the first NFT (balance = 1)')
 
     // Verify NFT data
     expect(collectionStateAccount.counter.toNumber()).to.equal(1)
@@ -462,27 +500,23 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     // Get second NFT metadata and master edition
     const metadata2 = await getMetadata(mint2)
     const masterEdition2 = await getMasterEdition(mint2)
-    const destination2 = getAssociatedTokenAddressSync(mint2, payer.publicKey)
-
-    // Find verification result PDA
-    const [verificationResultPda2] =
-      anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from('verification'), payer.publicKey.toBuffer()],
-        zkEscrowSolProgram.programId,
-      )
+    const destination2 = getAssociatedTokenAddressSync(mint2, user.publicKey)
 
     // Compute budget instruction (needed for verify_collection CPI)
     const computeBudgetIx2 = ComputeBudgetProgram.setComputeUnitLimit({
       units: 400_000, // Increased limit for mint + verify
     })
 
-    // Mint second NFT with verified proof (now includes automatic verification)
+    // Mint second NFT with verified proof (sponsor pays again)
+    console.log('\n💰 Sponsor mints 2nd NFT for user')
     const tx = await zkEscrowSolProgram.methods
       .mintWithVerifiedProof()
       .accounts({
-        signer: payer.publicKey,
+        signer: sponsor.publicKey,  // Sponsor pays
+        verificationResult: verificationResultPda,  // Same verification PDA
+        nftRecipient: user.publicKey,  // NFT goes to user
         mint: mint2,
-        destination: destination2,
+        destination: destination2,  // ATA for user
         metadata: metadata2,
         masterEdition: masterEdition2,
         mintAuthority: mintAuthority,
@@ -518,5 +552,19 @@ describe('Integration Test - ZK Proof Verification and NFT Mint', () => {
     console.log('metadata2String', metadata2String)
     expect(metadata2String.includes(expectedUri2)).to.be.true
     console.log(`✅ Second NFT minted with URI: ${expectedUri2}`)
+
+    // Verify destination2 (user's ATA) owns the NFT with balance = 1
+    const destination2Account = await getAccount(connection, destination2)
+    console.log('\n=== Verify Second NFT Ownership ===')
+    console.log('Destination2 (ATA):', destination2.toBase58())
+    console.log('Owner of ATA:', destination2Account.owner.toBase58())
+    console.log('Authority of ATA:', destination2Account.owner.toBase58())
+    console.log('Mint:', destination2Account.mint.toBase58())
+    console.log('Balance:', destination2Account.amount.toString())
+
+    expect(destination2Account.mint.toBase58()).to.equal(mint2.toBase58())
+    expect(destination2Account.owner.toBase58()).to.equal(user.publicKey.toBase58())
+    expect(destination2Account.amount.toString()).to.equal('1')
+    console.log('✅ Verified: destination2 owns the second NFT (balance = 1)')
   })
 })

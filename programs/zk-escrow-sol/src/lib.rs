@@ -110,13 +110,25 @@ pub mod zk_escrow_sol {
         msg!("=== Step 2: Mint NFT with Verified Proof ===");
 
         let result = &ctx.accounts.verification_result;
-        // let current_time = Clock::get()?.unix_timestamp;
 
         // 1. Security checks
+        // Verify nft_recipient matches the verified user
         require!(
-            result.user == ctx.accounts.signer.key(),
+            ctx.accounts.nft_recipient.key() == result.user,
             Secp256k1Error::UnauthorizedUser
         );
+
+        // Verify destination is the correct ATA for (verified user, mint)
+        let expected_destination = anchor_spl::associated_token::get_associated_token_address(
+            &result.user.key(),
+            &ctx.accounts.mint.key(),
+        );
+        require!(
+            ctx.accounts.destination.key() == expected_destination,
+            Secp256k1Error::UnauthorizedUser
+        );
+
+        msg!("NFT recipient and destination verified: {}", result.user);
 
         // 2. Get collection info for logging
         let collection_state = &ctx.accounts.collection_state;
@@ -125,9 +137,13 @@ pub mod zk_escrow_sol {
         msg!("Counter: {}", collection_state.counter);
 
         // 3. Mint NFT via CPI
+        // owner = verified user (receives NFT), payer = signer (pays for accounts)
+        // spl_nft will create destination ATA with authority=owner
+
         let cpi_program = ctx.accounts.spl_nft_program.to_account_info();
         let cpi_accounts = spl_nft::cpi::accounts::MintNFT {
-            owner: ctx.accounts.signer.to_account_info(),
+            owner: ctx.accounts.nft_recipient.to_account_info(),
+            payer: ctx.accounts.signer.to_account_info(),
             mint: ctx.accounts.mint.to_account_info(),
             destination: ctx.accounts.destination.to_account_info(),
             metadata: ctx.accounts.metadata.to_account_info(),
@@ -400,10 +416,6 @@ pub struct VerifyProofAndMint<'info> {
     #[account(mut)]
     pub mint: Signer<'info>,
 
-    /// CHECK: User's token account for receiving minted NFT
-    #[account(mut)]
-    pub destination: AccountInfo<'info>,
-
     /// CHECK: Metaplex metadata
     #[account(mut)]
     pub metadata: UncheckedAccount<'info>,
@@ -510,7 +522,6 @@ pub struct VerificationResult {
 
 /// Account structure for verify_proof instruction
 #[derive(Accounts)]
-#[instruction(proof: Proof)]
 pub struct VerifyProof<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -540,20 +551,21 @@ pub struct MintWithVerifiedProof<'info> {
     pub signer: Signer<'info>,
 
     /// Verification result PDA (reusable for multiple mints)
-    #[account(
-        mut,
-        seeds = [b"verification", signer.key().as_ref()],
-        bump,
-        constraint = verification_result.user == signer.key() @ Secp256k1Error::UnauthorizedUser,
-    )]
+    /// Contains the user pubkey who will receive the NFT
+    #[account(mut)]
     pub verification_result: Account<'info, VerificationResult>,
 
-    // ========== NFT Mint Accounts (same as verify_proof_and_mint) ==========
+    /// The verified user who will receive the NFT
+    /// CHECK: This account is validated against verification_result.user
+    pub nft_recipient: UncheckedAccount<'info>,
+
+    // ========== NFT Mint Accounts ==========
     /// New NFT mint
     #[account(mut)]
     pub mint: Signer<'info>,
 
-    /// CHECK: User's token account for receiving minted NFT
+    /// User's ATA for receiving the NFT (will be created by spl_nft with authority=nft_recipient)
+    /// CHECK: Will be created by spl_nft program
     #[account(mut)]
     pub destination: AccountInfo<'info>,
 
@@ -572,7 +584,7 @@ pub struct MintWithVerifiedProof<'info> {
     #[account(mut)]
     pub collection_mint: Account<'info, Mint>,
 
-    /// Collection state (price 정보 포함)
+    /// Collection state (contains price information)
     #[account(
         mut,
         seeds = [b"collection_state", collection_mint.key().as_ref()],

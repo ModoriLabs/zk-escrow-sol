@@ -125,6 +125,7 @@ describe('mint-nft', () => {
     const tx = await program.methods
       .mintNft()
       .accountsStrict({
+        payer: wallet.publicKey,
         owner: wallet.publicKey,
         destination,
         metadata,
