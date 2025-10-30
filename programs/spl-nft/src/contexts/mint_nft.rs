@@ -15,11 +15,17 @@ use anchor_spl::{
 
 #[derive(Accounts)]
 pub struct MintNFT<'info> {
+    /// The owner who will receive the NFT (doesn't need to sign)
+    /// CHECK: This is the recipient of the NFT
+    pub owner: UncheckedAccount<'info>,
+
+    /// The payer who pays for account creation
     #[account(mut)]
-    pub owner: Signer<'info>,
+    pub payer: Signer<'info>,
+
     #[account(
         init,
-        payer = owner,
+        payer = payer,
         mint::decimals = 0,
         mint::authority = mint_authority,
         mint::freeze_authority = mint_authority,
@@ -27,7 +33,7 @@ pub struct MintNFT<'info> {
     pub mint: Account<'info, Mint>,
     #[account(
         init,
-        payer = owner,
+        payer = payer,
         associated_token::mint = mint,
         associated_token::authority = owner
     )]
@@ -64,7 +70,7 @@ impl<'info> MintNFT<'info> {
         let master_edition = &self.master_edition.to_account_info();
         let mint = &self.mint.to_account_info();
         let authority = &self.mint_authority.to_account_info();
-        let payer = &self.owner.to_account_info();
+        let payer = &self.payer.to_account_info();
         let system_program = &self.system_program.to_account_info();
         let spl_token_program = &self.token_program.to_account_info();
         let spl_metadata_program = &self.token_metadata_program.to_account_info();
